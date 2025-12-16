@@ -1,33 +1,61 @@
 ﻿<!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width" />
-  <title>ROI 시나리오 계산기</title>
-  <meta name="description" content="A/B/C 시나리오로 ROI를 비교하는 초경량 계산기" />
-  <link rel="stylesheet" href="./app.css" />
-</head>
-<body>
-  <main class="wrap">
-    <header class="hero">
-      <h1>ROI 시나리오 비교 계산기</h1>
-      <p>초기 비용 + 월 순이익 기준으로 A/B/C를 비교합니다.</p>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ROI 시나리오 비교 계산기</title>
+    <meta name="description" content="초기 비용 + 월 순이익 기준으로 A/B/C ROI를 비교하는 초경량 계산기" />
 
-    <section class="bar">
-      <button id="shareBtn">공유 링크 복사</button>
-      <button id="resetBtn" class="ghost">리셋</button>
-      <div id="note" class="note"></div>
-    </section>
+    <link rel="stylesheet" href="./app.css" />
 
-    <section id="cards" class="grid"></section>
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  </head>
 
-    <section class="summary">
-      <div class="t">결론</div>
-      <div class="d" id="conclusion">계산 중...</div>
-    </section>
-  </main>
+  <body>
+    <div class="wrap">
+      <header class="topbar">
+        <h1>ROI 시나리오 비교 계산기</h1>
+        <div class="actions">
+          <button id="shareBtn" type="button">공유 링크 복사</button>
+          <button id="resetBtn" type="button" class="ghost">리셋</button>
+        </div>
+      </header>
 
-  <script src="./app.js"></script>
-</body>
+      <p class="sub">초기 비용 + 월 순이익 기준으로 A/B/C를 비교합니다.</p>
+
+      <!-- Turnstile: 평소엔 조용히, 의심 트래픽일 때만 챌린지 -->
+      <div class="ts">
+        <div
+          class="cf-turnstile"
+          data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd"
+          data-theme="dark"
+          data-callback="turnstileOk"
+        ></div>
+        <div class="ts-note" id="tsNote">보안 확인이 완료되면 기능이 활성화됩니다.</div>
+      </div>
+
+      <main class="grid" id="cards"></main>
+
+      <section class="conclusion card">
+        <div class="head">
+          <h2>결론</h2>
+        </div>
+        <div id="conclusion" class="conclusionText">입력값을 조정하면 추천이 갱신됩니다.</div>
+      </section>
+    </div>
+
+    <script>
+      // Turnstile 통과 전: 일부 인터랙션 제한(최소 가드)
+      window.__ts_ok = false;
+      window.turnstileOk = function () {
+        window.__ts_ok = true;
+        const note = document.getElementById("tsNote");
+        if (note) note.textContent = "보안 확인 완료.";
+        document.body.classList.add("ts-ok");
+      };
+    </script>
+
+    <script src="./app.js" defer></script>
+  </body>
 </html>
