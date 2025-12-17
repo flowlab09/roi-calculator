@@ -5,26 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ROI 시나리오 비교 계산기</title>
     <meta name="description" content="초기 비용 + 월 순이익 기준으로 A/B/C ROI를 비교하는 초경량 계산기" />
-    <link rel="stylesheet" href="./app.css" />
 
-    <script>
-      window.__ts_ok = false;
-      window.turnstileOk = function () {
-        window.__ts_ok = true;
-        const note = document.getElementById("tsNote");
-        if (note) note.textContent = "보안 확인 완료.";
-        document.body.classList.add("ts-ok");
-        const calcBtn = document.getElementById("calcBtn");
-        if (calcBtn) calcBtn.disabled = false;
-        const barHint = document.getElementById("barHint");
-        if (barHint) barHint.textContent = "계산 가능";
-      };
-    </script>
+    <link rel="stylesheet" href="./app.css" />
 
     <!-- Cloudflare Turnstile -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-    <!-- Google Analytics (GA4) -->
+    <!-- GA4 (필요시 유지/교체) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-TCTM0SR4TJ"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -34,99 +21,85 @@
     </script>
   </head>
 
-  <body>
+  <body class="locked">
     <div class="wrap">
       <header class="topbar">
-        <h1>ROI 시나리오 비교 계산기</h1>
+        <div>
+          <h1>ROI 시나리오 비교 계산기</h1>
+          <p class="sub">초기 비용 + 월 순이익으로 A/B/C를 비교합니다. (CSV 다운로드 지원)</p>
+        </div>
+
         <div class="actions">
-          <button id="shareBtn" type="button">공유 링크 복사</button>
-          <button id="resetBtn" type="button" class="ghost">리셋</button>
+          <button id="shareBtn" type="button" disabled>공유 링크 복사</button>
+          <button id="csvBtn" type="button" class="ghost" disabled>CSV 다운로드</button>
+          <button id="resetBtn" type="button" class="ghost" disabled>리셋</button>
         </div>
       </header>
 
-      <p class="sub">
-        초기 비용 + 월 순이익 기준으로 A/B/C를 비교합니다. 계산은 <b>버튼을 눌렀을 때만</b> 갱신됩니다.
-      </p>
-
-      <div class="ts">
-        <div
-          class="cf-turnstile"
-          data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd"
-          data-theme="dark"
-          data-callback="turnstileOk"
-        ></div>
-        <div class="ts-note" id="tsNote">보안 확인이 완료되면 “계산하기”가 활성화됩니다.</div>
-      </div>
-
-      <section class="section">
-        <div class="sectionHead">
-          <h2>입력</h2>
-          <div class="hint">숫자는 클릭하면 전체 선택되어 바로 덮어쓰기 됩니다.</div>
-        </div>
-
-        <main class="grid" id="inputs"></main>
-
-        <div class="bar">
-          <button id="calcBtn" type="button" disabled>계산하기</button>
-          <div class="barHint" id="barHint">Turnstile 완료 후 계산 가능</div>
+      <!-- Turnstile -->
+      <section class="card ts">
+        <div class="tsRow">
+          <div
+            class="cf-turnstile"
+            data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd"
+            data-theme="dark"
+            data-callback="turnstileOk"
+          ></div>
+          <div class="tsNote" id="tsNote">보안 확인이 완료되면 기능이 활성화됩니다.</div>
         </div>
       </section>
 
-      <section class="section" id="resultsSection" hidden>
-        <div class="sectionHead">
-          <h2>결과</h2>
+      <main class="grid" id="cards"></main>
+
+      <section class="card conclusion">
+        <div class="conclusionHead">
+          <h2>결론</h2>
           <div class="hint">추천 기준: 24개월 누적 최대 → 손익분기 빠른 순</div>
         </div>
+        <div id="conclusion" class="conclusionText">보안 확인 후 입력하면 추천이 표시됩니다.</div>
 
-        <main class="grid" id="results"></main>
+        <div class="ctaRow">
+          <button id="issueBtn" type="button" disabled>💬 개선 제안/버그 제보 (GitHub 이슈)</button>
+        </div>
+        <div class="hint2">
+          * 이슈는 <b>flowlab09/markdown</b> 레포에 저장됩니다. (레포가 Private이면 너만 확인 가능)
+        </div>
+      </section>
 
-        <section class="conclusion card">
-          <div class="head">
-            <h2>결론</h2>
-          </div>
-          <div id="conclusion" class="conclusionText">계산을 실행하면 추천이 표시됩니다.</div>
-
-          <div class="dlRow">
-            <button id="csvBtn" type="button" class="ghost">결과 CSV 다운로드</button>
-          </div>
-        </section>
-
-        <!-- ✅ 위치 변경: 결론 바로 아래에 Markdown 섹션 붙임 -->
-        <section class="section sectionTight">
-          <div class="sectionHead">
-            <h2>사이트 고칠 점 (Markdown)</h2>
-            <div class="hint">
-              여기 적고, 버튼으로 <b>비공개 GitHub 이슈</b>(flowlab09/markdown)에 저장.
-            </div>
-          </div>
-
-          <div class="mdBox">
-            <textarea id="mdText" spellcheck="false"></textarea>
-
-            <div class="mdActions">
-              <button id="mdCopyBtn" type="button">Markdown 복사</button>
-              <button id="mdDlBtn" type="button" class="ghost">.md 다운로드</button>
-              <button id="ghIssueBtn" type="button">GitHub 이슈로 저장(비공개)</button>
-            </div>
-
-            <div class="mdNote">
-              ⚠️ 개인정보/비밀번호/토큰/API 키 등 민감정보는 입력하지 마세요.
-            </div>
-          </div>
-        </section>
+      <section class="card security">
+        <div class="secTitle">🔐 보안 제보</div>
+        <div class="secDesc">
+          보안 취약점은 GitHub 이슈로 받지 않습니다. 이메일로만 제보하세요. (민감정보/토큰 입력 금지)
+        </div>
+        <div class="secActions">
+          <button id="openMail" type="button" disabled>보안 이메일 열기</button>
+          <button id="copyMail" type="button" class="ghost" disabled>이메일 복사</button>
+          <span class="mail" id="mailAddr">roicalculator.official@gmail.com</span>
+        </div>
       </section>
 
       <footer class="footer">
-        <div class="footRow">
-          <div>© 2025 <b>Alive Deserve</b>. All rights reserved.</div>
-          <div class="footLinks">
-            <a href="mailto:security@alivedeserve.com?subject=%5BSECURITY%5D%20ROI%20Calculator%20Report" rel="noopener">
-              보안 제보(이메일)
-            </a>
-          </div>
-        </div>
+        © <span id="year"></span> BAN. All rights reserved.
       </footer>
     </div>
+
+    <script>
+      window.__ts_ok = false;
+      window.turnstileOk = function () {
+        window.__ts_ok = true;
+        document.body.classList.remove("locked");
+
+        const note = document.getElementById("tsNote");
+        if (note) note.textContent = "보안 확인 완료.";
+
+        ["shareBtn","csvBtn","resetBtn","issueBtn","openMail","copyMail"].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = false;
+        });
+
+        document.querySelectorAll("input").forEach((el) => (el.disabled = false));
+      };
+    </script>
 
     <script src="./app.js" defer></script>
   </body>

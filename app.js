@@ -1,504 +1,341 @@
-﻿// ROI Calculator (static) + Markdown → Private GitHub Issue 저장 (no backend)
-// Target repo: https://github.com/flowlab09/markdown (PRIVATE)
+﻿// ROI Calculator - GitHub Issue(프리필)로 제출
+// Repo: flowlab09/markdown (private 가능)
+// 주의: 이슈 실제 생성은 "GitHub 페이지에서 Submit"을 눌러야 됨.
 
-const GITHUB_OWNER = "flowlab09";
-const GITHUB_REPO  = "markdown";
-const GITHUB_LABELS = ["feedback"];
+const STORE_KEY = "roi_calc_v1";
+const SECURITY_EMAIL = "roicalculator.official@gmail.com";
 
-const KEY = "roi_public_v3";
+const ISSUE_NEW_URL = "https://github.com/flowlab09/markdown/issues/new";
+const ISSUE_LABELS = ["feedback"]; // 레포에 라벨 없으면 그냥 무시될 수 있음
 
-const DEFAULTS = [
-  { name: "A안", cost: 500000,  gain: 150000 },
-  { name: "B안", cost: 900000,  gain: 220000 },
+const defaults = [
+  { name: "A안", cost: 500000, gain: 150000 },
+  { name: "B안", cost: 900000, gain: 220000 },
   { name: "C안", cost: 1500000, gain: 320000 },
 ];
 
-const elInputs = document.getElementById("inputs");
-const elResultsSection = document.getElementById("resultsSection");
-const elResults = document.getElementById("results");
-const elConclusion = document.getElementById("conclusion");
+const $cards = document.getElementById("cards");
+const $conclusion = document.getElementById("conclusion");
+document.getElementById("year").textContent = String(new Date().getFullYear());
 
-const btnShare = document.getElementById("shareBtn");
-const btnReset = document.getElementById("resetBtn");
-const btnCalc  = document.getElementById("calcBtn");
-const barHint  = document.getElementById("barHint");
+const shareBtn = document.getElementById("shareBtn");
+const resetBtn = document.getElementById("resetBtn");
+const csvBtn = document.getElementById("csvBtn");
+const issueBtn = document.getElementById("issueBtn");
 
-const btnCsv = document.getElementById("csvBtn");
-const mdText = document.getElementById("mdText");
-const btnMdCopy = document.getElementById("mdCopyBtn");
-const btnMdDl   = document.getElementById("mdDlBtn");
-const btnGhIssue = document.getElementById("ghIssueBtn");
+const openMailBtn = document.getElementById("openMail");
+const copyMailBtn = document.getElementById("copyMail");
+const mailAddr = document.getElementById("mailAddr");
+mailAddr.textContent = SECURITY_EMAIL;
 
-function requireTurnstile() {
-  if (window.__ts_ok) return true;
-  alert("보안 확인(턴스타일)을 먼저 완료해 주세요.");
-  return false;
-}
+openMailBtn?.addEventListener("click", () => {
+  location.href = `mailto:${SECURITY_EMAIL}?subject=[SECURITY] ROI Calculator`;
+});
+copyMailBtn?.addEventListener("click", async () => {
+  await navigator.clipboard.writeText(SECURITY_EMAIL);
+  alert("이메일이 복사되었습니다.");
+});
 
 function n(v) {
   const x = Number(String(v ?? "").replaceAll(",", "").trim());
   return Number.isFinite(x) ? x : 0;
 }
-function safeName(s) {
-  const t = String(s ?? "").trim();
-  return t.length ? t.slice(0, 24) : "시나리오";
+function fmtWon(v) {
+  const x = Math.round(Number(v) || 0);
+  return `${x.toLocaleString("ko-KR")}원`;
 }
-function fmtWon(v) { return Math.round(v).toLocaleString("ko-KR") + "원"; }
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+function fmtMonths(v) {
+  if (!Number.isFinite(v)) return "회수 불가";
+  return `${(Math.round(v * 10) / 10).toLocaleString("ko-KR")}개월`;
 }
-function formatNumberForInput(v) {
-  const x = n(v);
-  if (x === 0) return "0";
-  return Math.round(x).toLocaleString("ko-KR");
+function safe(s, max = 40) {
+  return String(s ?? "").trim().slice(0, max);
 }
-function normalizeNumberText(text) {
-  let s = String(text ?? "").trim();
-  s = s.replace(/[^\d\-]/g, "");
-  if (s.includes("-")) s = (s[0] === "-" ? "-" : "") + s.replaceAll("-", "");
-  if (s === "" || s === "-") return "0";
-  return s;
-}
+
 function calc(item) {
   const cost = Math.max(0, n(item.cost));
-  const net  = n(item.gain);
-  const months = net > 0 ? cost / net : Infinity;
-  const net24  = net * 24 - cost;
-  return { cost, net, months, net24 };
+  const gain = n(item.gain);
+  const breakeven = gain > 0 ? cost / gain : Infinity;
+  const net24 = gain * 24 - cost;
+  return { cost, gain, breakeven, net24, ok: gain > 0 };
 }
-function encodeShare(data) {
-  const parts = data.map((it) => {
-    const name = encodeURIComponent(safeName(it.name));
-    const cost = Math.round(Math.max(0, n(it.cost)));
-    const gain = Math.round(n(it.gain));
-    return `${cost},${gain},${name}`;
-  });
-  return `v=3&d=${parts.join("|")}`;
-}
-function decodeShare() {
-  const url = new URL(location.href);
-  const v = url.searchParams.get("v");
-  const d = url.searchParams.get("d");
-  if (v !== "3" || !d) return null;
 
-  const items = d.split("|").slice(0, 3).map((seg, idx) => {
-    const [cost, gain, name] = seg.split(",");
-    return {
-      name: name ? decodeURIComponent(name) : DEFAULTS[idx]?.name ?? `안${idx + 1}`,
-      cost: n(cost),
-      gain: n(gain),
-    };
-  });
-
-  while (items.length < 3) items.push({ ...DEFAULTS[items.length] });
-  return items;
-}
-function loadLocal() {
+function load() {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length !== 3) return null;
-    return parsed.map((x, i) => ({
-      name: safeName(x?.name ?? DEFAULTS[i].name),
-      cost: n(x?.cost ?? DEFAULTS[i].cost),
-      gain: n(x?.gain ?? DEFAULTS[i].gain),
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return structuredClone(defaults);
+    const p = JSON.parse(raw);
+    if (!Array.isArray(p) || p.length !== 3) return structuredClone(defaults);
+    return p.map((x, i) => ({
+      name: safe(x?.name ?? defaults[i].name, 30),
+      cost: n(x?.cost ?? defaults[i].cost),
+      gain: n(x?.gain ?? defaults[i].gain),
     }));
-  } catch { return null; }
+  } catch {
+    return structuredClone(defaults);
+  }
 }
-function saveLocal(data) {
-  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {}
+function save(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
 }
 
-function defaultMdTemplate() {
-  return [
-    "## 현재 상태 요약",
-    "- 무엇이 문제인가:",
-    "- 기대 동작:",
-    "- 실제 동작:",
-    "",
-    "## 재현 방법",
-    "1.",
-    "2.",
-    "3.",
-    "",
-    "## 개선 아이디어",
-    "- ",
-    "",
-    "## 환경",
-    "- OS:",
-    "- 브라우저:",
-    "- 화면/기기:",
-    "",
-    "## 참고(링크/스크린샷)",
-    "- ",
-    "",
-  ].join("\n");
-}
-function ensureMdInitialized() {
-  if (!mdText) return;
-  if (!mdText.value || mdText.value.trim().length === 0) mdText.value = defaultMdTemplate();
-}
-function prependMdSummary(summary) {
-  if (!mdText || !summary) return;
-  const line =
-    `> 현재 계산 기준 추천 시나리오: ${summary.bestName} ` +
-    `(24개월 누적 ${fmtWon(summary.bestNet24)}, 손익분기 ${summary.bestMonths}, 월 순이익 ${fmtWon(summary.bestMonthly)})`;
+let data = load();
 
-  const existing = mdText.value || "";
-  const lines = existing.split("\n");
-  if (lines[0]?.startsWith("> 현재 계산 기준 추천 시나리오:")) {
-    lines[0] = line;
-    mdText.value = lines.join("\n");
+function kpiRow(label, value) {
+  const row = document.createElement("div");
+  row.className = "kpi";
+  const l = document.createElement("span");
+  l.textContent = label;
+  const r = document.createElement("strong");
+  r.textContent = value;
+  row.appendChild(l);
+  row.appendChild(r);
+  return { row, r };
+}
+
+function buildField(labelText, initial, onChange) {
+  const wrap = document.createElement("label");
+  wrap.textContent = labelText;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.value = String(Math.round(n(initial)));
+  input.disabled = !window.__ts_ok;
+
+  // 포커스 시 전체 선택 (덮어쓰기 편하게)
+  input.addEventListener("focus", () => setTimeout(() => input.select(), 0));
+
+  input.addEventListener("input", () => {
+    onChange(n(input.value));
+  });
+
+  input.addEventListener("blur", () => {
+    input.value = String(Math.round(n(input.value)));
+  });
+
+  wrap.appendChild(input);
+  return { wrap, input };
+}
+
+function build() {
+  $cards.innerHTML = "";
+
+  data.forEach((it, idx) => {
+    const card = document.createElement("section");
+    card.className = "card";
+    const inner = document.createElement("div");
+    inner.className = "cardInner";
+
+    const head = document.createElement("div");
+    head.className = "headRow";
+
+    const name = document.createElement("input");
+    name.className = "name";
+    name.type = "text";
+    name.value = safe(it.name, 30) || `안${idx + 1}`;
+    name.disabled = !window.__ts_ok;
+    name.addEventListener("input", () => {
+      data[idx].name = safe(name.value, 30);
+      save(data);
+      render();
+    });
+
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = idx === 0 ? "A" : idx === 1 ? "B" : "C";
+
+    head.appendChild(name);
+    head.appendChild(pill);
+
+    const f1 = buildField("초기 비용(원)", it.cost, (v) => {
+      data[idx].cost = v;
+      save(data);
+      render();
+    });
+    const f2 = buildField("월 순이익(원)", it.gain, (v) => {
+      data[idx].gain = v;
+      save(data);
+      render();
+    });
+
+    const kpis = document.createElement("div");
+    kpis.className = "kpis";
+    const k1 = kpiRow("월 순이익", "");
+    const k2 = kpiRow("손익분기", "");
+    const k3 = kpiRow("24개월 누적", "");
+    kpis.appendChild(k1.row);
+    kpis.appendChild(k2.row);
+    kpis.appendChild(k3.row);
+
+    const warn = document.createElement("div");
+    warn.className = "warn";
+    warn.style.display = "none";
+
+    inner.appendChild(head);
+    inner.appendChild(f1.wrap);
+    inner.appendChild(f2.wrap);
+    inner.appendChild(kpis);
+    inner.appendChild(warn);
+
+    card.appendChild(inner);
+    $cards.appendChild(card);
+
+    card.__refs = { k1, k2, k3, warn };
+  });
+
+  render();
+}
+
+function pickBest(results) {
+  const scored = results.map((r, idx) => ({ ...r, idx }));
+  scored.sort((a, b) => {
+    if (b.net24 !== a.net24) return b.net24 - a.net24;
+    return a.breakeven - b.breakeven;
+  });
+  return scored[0] ?? null;
+}
+
+function render() {
+  const results = data.map(calc);
+  const best = pickBest(results);
+
+  Array.from($cards.children).forEach((card, idx) => {
+    const r = results[idx];
+    const refs = card.__refs;
+    refs.k1.r.textContent = fmtWon(r.gain);
+    refs.k2.r.textContent = r.ok ? fmtMonths(r.breakeven) : "회수 불가";
+    refs.k3.r.textContent = fmtWon(r.net24);
+
+    if (!r.ok) {
+      refs.warn.style.display = "block";
+      refs.warn.textContent = "월 순이익이 0 이하라 손익분기 계산이 불가능합니다.";
+    } else {
+      refs.warn.style.display = "none";
+      refs.warn.textContent = "";
+    }
+  });
+
+  if (!window.__ts_ok) {
+    $conclusion.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
     return;
   }
-  mdText.value = [line, "", existing].join("\n");
+
+  const bItem = data[best.idx];
+  const bName = safe(bItem?.name || `안${best.idx + 1}`, 30);
+
+  $conclusion.textContent =
+    `현재 입력 기준 추천 시나리오: ${bName} ` +
+    `(24개월 누적 ${fmtWon(best.net24)}, 손익분기 ${best.ok ? fmtMonths(best.breakeven) : "회수 불가"}, 월 순이익 ${fmtWon(best.gain)})`;
 }
-function downloadText(filename, text) {
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-function toCSV(result) {
-  const rows = [["시나리오","초기비용","월순이익","손익분기(개월)","24개월누적"]];
-  result.computed.forEach(({ it, m }) => {
-    rows.push([
-      safeName(it.name),
-      Math.round(m.cost),
-      Math.round(m.net),
-      Number.isFinite(m.months) ? m.months.toFixed(1) : "",
-      Math.round(m.net24),
-    ]);
+
+function buildIssueUrl() {
+  const results = data.map(calc);
+  const best = pickBest(results);
+
+  const title = `[ROI] ${new Date().toISOString().slice(0,10)} 개선/버그 리포트`;
+  const lines = [];
+
+  lines.push(`## 자동 첨부 (현재 입력값)`);
+  data.forEach((it, i) => {
+    const r = results[i];
+    lines.push(`- ${safe(it.name || `안${i+1}`, 30)}: 초기비용 ${fmtWon(r.cost)}, 월순이익 ${fmtWon(r.gain)}, 손익분기 ${r.ok ? fmtMonths(r.breakeven) : "회수 불가"}, 24개월누적 ${fmtWon(r.net24)}`);
   });
-  return rows.map((r) => r.join(",")).join("\n");
-}
-function gaEvent(name, params = {}) {
-  try { if (typeof gtag === "function") gtag("event", name, params); } catch {}
-}
-function todayStamp() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-function flashButton(btn, text) {
-  const old = btn.textContent;
-  btn.textContent = text;
-  btn.disabled = true;
-  setTimeout(() => {
-    btn.textContent = old;
-    btn.disabled = false;
-  }, 850);
-}
-function formatMonths(months) {
-  if (!Number.isFinite(months)) return "회수 불가";
-  return `${months.toFixed(1)}개월`;
-}
-function buildGithubIssueUrl(title, bodyMd) {
-  const base = `https://github.com/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(GITHUB_REPO)}/issues/new`;
-  const maxBody = 6000;
-  const trimmedBody = (bodyMd || "").slice(0, maxBody);
+
+  if (best) {
+    const bItem = data[best.idx];
+    const bName = safe(bItem?.name || `안${best.idx + 1}`, 30);
+    lines.push("");
+    lines.push(`> 추천: **${bName}** (24개월 누적 ${fmtWon(best.net24)}, 손익분기 ${best.ok ? fmtMonths(best.breakeven) : "회수 불가"})`);
+  }
+
+  lines.push("");
+  lines.push("## 현재 상태 요약");
+  lines.push("- 무엇이 문제인가:");
+  lines.push("- 기대 동작:");
+  lines.push("- 실제 동작:");
+  lines.push("");
+  lines.push("## 개선 아이디어");
+  lines.push("-");
+
+  lines.push("");
+  lines.push("## 환경");
+  lines.push(`- URL: ${location.href}`);
+  lines.push(`- UA: ${navigator.userAgent}`);
+
+  const body = lines.join("\n");
 
   const params = new URLSearchParams();
   params.set("title", title);
-  params.set("body", trimmedBody);
-  if (Array.isArray(GITHUB_LABELS) && GITHUB_LABELS.length) {
-    GITHUB_LABELS.forEach((l) => params.append("labels", String(l)));
-  }
-  return `${base}?${params.toString()}`;
+  params.set("body", body);
+  if (ISSUE_LABELS.length) params.set("labels", ISSUE_LABELS.join(","));
+
+  // /issues/new?title=...&body=...&labels=...
+  return `${ISSUE_NEW_URL}?${params.toString()}`;
 }
 
-let draft = decodeShare() || loadLocal() || structuredClone(DEFAULTS);
-let lastResult = null;
-
-function renderInputs() {
-  if (!elInputs) return;
-  elInputs.innerHTML = "";
-
-  draft.forEach((it, i) => {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="head">
-        <div class="nameRow">
-          <input class="name" type="text" value="${escapeHtml(safeName(it.name))}"
-                 data-i="${i}" data-k="name" />
-          <span class="tag" style="opacity:.35">입력</span>
-        </div>
-      </div>
-
-      <label>
-        초기 비용(원)
-        <div class="numWrap">
-          <input type="text" inputmode="numeric" data-i="${i}" data-k="cost"
-                 value="${escapeHtml(formatNumberForInput(it.cost))}" />
-          <button class="smallBtn" type="button" data-i="${i}" data-k="cost" data-act="clear">지움</button>
-        </div>
-      </label>
-
-      <label>
-        월 순이익(원)
-        <div class="numWrap">
-          <input type="text" inputmode="numeric" data-i="${i}" data-k="gain"
-                 value="${escapeHtml(formatNumberForInput(it.gain))}" />
-          <button class="smallBtn" type="button" data-i="${i}" data-k="gain" data-act="clear">지움</button>
-        </div>
-      </label>
-
-      <div class="sep"></div>
-
-      <div class="metrics">
-        <div class="row"><span>힌트</span><b>계산은 버튼으로 실행</b></div>
-        <div class="row"><span>저장</span><b>입력은 브라우저에 저장</b></div>
-      </div>
-    `;
-    elInputs.appendChild(card);
+async function copyShareLink() {
+  const qs = new URLSearchParams();
+  data.forEach((it, i) => {
+    qs.set(`n${i}`, safe(it.name, 30));
+    qs.set(`c${i}`, String(n(it.cost)));
+    qs.set(`g${i}`, String(n(it.gain)));
   });
+  const url = `${location.origin}${location.pathname}?${qs.toString()}`;
+  await navigator.clipboard.writeText(url);
+  alert("공유 링크가 복사되었습니다.");
 }
 
-function renderResults(data) {
-  if (!elResults) return null;
+function applyQuery() {
+  const qs = new URLSearchParams(location.search);
+  if ([...qs.keys()].length === 0) return;
 
-  const computed = data.map((it) => ({ it, m: calc(it) }));
-  const scored = computed.map((x, idx) => ({
-    idx,
-    name: safeName(x.it.name),
-    net24: x.m.net24,
-    months: x.m.months,
-    net: x.m.net,
+  data = structuredClone(defaults).map((d, i) => ({
+    name: safe(qs.get(`n${i}`) ?? d.name, 30),
+    cost: n(qs.get(`c${i}`) ?? d.cost),
+    gain: n(qs.get(`g${i}`) ?? d.gain),
   }));
-
-  scored.sort((a, b) => {
-    if (b.net24 !== a.net24) return b.net24 - a.net24;
-    const am = Number.isFinite(a.months) ? a.months : 1e18;
-    const bm = Number.isFinite(b.months) ? b.months : 1e18;
-    if (am !== bm) return am - bm;
-    return b.net - a.net;
-  });
-
-  const best = scored[0];
-
-  elResults.innerHTML = "";
-  computed.forEach(({ it, m }, i) => {
-    const isBest = i === best.idx;
-    const card = document.createElement("section");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="head">
-        <div class="nameRow">
-          <div class="name" style="border:1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.10);">${escapeHtml(safeName(it.name))}</div>
-          ${isBest ? `<span class="tag">추천</span>` : `<span class="tag" style="opacity:.25"> </span>`}
-        </div>
-      </div>
-
-      <div class="metrics">
-        <div class="row"><span>초기 비용</span><b>${fmtWon(m.cost)}</b></div>
-        <div class="row"><span>월 순이익</span><b>${fmtWon(m.net)}</b></div>
-        <div class="row"><span>손익분기</span><b>${escapeHtml(formatMonths(m.months))}</b></div>
-        <div class="row"><span>24개월 누적</span><b>${fmtWon(m.net24)}</b></div>
-      </div>
-
-      ${m.net <= 0 ? `<div class="warn">월 순이익이 0 이하라 손익분기 계산이 불가합니다.</div>` : ``}
-    `;
-    elResults.appendChild(card);
-  });
-
-  const bestItem = data[best.idx];
-  const bestM = calc(bestItem);
-
-  const summary = {
-    bestName: safeName(bestItem.name),
-    bestNet24: bestM.net24,
-    bestMonths: formatMonths(bestM.months),
-    bestMonthly: bestM.net,
-  };
-
-  if (elConclusion) {
-    elConclusion.innerHTML =
-      `추천은 <b>${escapeHtml(summary.bestName)}</b> 입니다. ` +
-      `(24개월 누적: <b>${escapeHtml(fmtWon(summary.bestNet24))}</b>, ` +
-      `손익분기: <b>${escapeHtml(summary.bestMonths)}</b>)`;
-  }
-
-  return { data, computed, bestIdx: best.idx, summary };
+  save(data);
 }
 
-function attachHandlers() {
-  // 숫자 입력 UX: 포커스 시 전체 선택
-  document.addEventListener("focusin", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLInputElement)) return;
-    if (t.type === "text" && (t.dataset.k === "cost" || t.dataset.k === "gain")) {
-      setTimeout(() => t.select(), 0);
-    }
+function downloadCSV() {
+  const header = ["시나리오","초기비용(원)","월순이익(원)","손익분기(개월)","24개월누적(원)"];
+  const rows = data.map((it) => {
+    const r = calc(it);
+    return [
+      safe(it.name, 30).replaceAll('"','""'),
+      String(r.cost),
+      String(r.gain),
+      r.ok ? String(Math.round(r.breakeven * 10) / 10) : "",
+      String(Math.round(r.net24)),
+    ];
   });
+  const csv = [header, ...rows].map((arr) => arr.map((x) => `"${String(x)}"`).join(",")).join("\n");
 
-  document.addEventListener("input", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLInputElement)) return;
-
-    const i = Number(t.dataset.i);
-    const k = t.dataset.k;
-    if (!Number.isFinite(i) || i < 0 || i > 2) return;
-
-    if (k === "name") {
-      draft[i].name = safeName(t.value);
-      saveLocal(draft);
-      return;
-    }
-
-    if (k === "cost" || k === "gain") {
-      const normalized = normalizeNumberText(t.value);
-      t.value = normalized;
-      draft[i][k] = n(normalized);
-      saveLocal(draft);
-    }
-  });
-
-  document.addEventListener("blur", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLInputElement)) return;
-    if (t.dataset.k === "cost" || t.dataset.k === "gain") {
-      t.value = formatNumberForInput(n(t.value));
-    }
-  }, true);
-
-  document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLElement)) return;
-    if (t.dataset.act === "clear") {
-      const i = Number(t.dataset.i);
-      const k = t.dataset.k;
-      if (!Number.isFinite(i) || i < 0 || i > 2) return;
-      if (k !== "cost" && k !== "gain") return;
-
-      draft[i][k] = 0;
-      const input = document.querySelector(`input[data-i="${i}"][data-k="${k}"]`);
-      if (input instanceof HTMLInputElement) input.value = "0";
-      saveLocal(draft);
-      gaEvent("roi_clear_field", { field: k, idx: i });
-    }
-  });
-
-  btnCalc?.addEventListener("click", () => {
-    if (!requireTurnstile()) return;
-
-    lastResult = renderResults(draft);
-    if (elResultsSection) elResultsSection.hidden = false;
-
-    ensureMdInitialized();
-    if (lastResult?.summary) prependMdSummary(lastResult.summary);
-
-    gaEvent("roi_calculate", { best: lastResult?.summary?.bestName || "(none)" });
-    if (barHint) barHint.textContent = "계산 완료";
-  });
-
-  btnShare?.addEventListener("click", async () => {
-    if (!requireTurnstile()) return;
-    const qs = encodeShare(draft);
-    const url = new URL(location.href);
-    url.search = qs;
-
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      flashButton(btnShare, "복사됨!");
-    } catch {
-      window.prompt("아래 링크를 복사하세요:", url.toString());
-    }
-    gaEvent("roi_share_link");
-  });
-
-  btnReset?.addEventListener("click", () => {
-    if (!requireTurnstile()) return;
-
-    draft = structuredClone(DEFAULTS);
-    saveLocal(draft);
-
-    const url = new URL(location.href);
-    url.search = "";
-    history.replaceState(null, "", url.toString());
-
-    lastResult = null;
-    elResultsSection && (elResultsSection.hidden = true);
-    if (elResults) elResults.innerHTML = "";
-    if (elConclusion) elConclusion.textContent = "계산을 실행하면 추천이 표시됩니다.";
-
-    renderInputs();
-    ensureMdInitialized();
-    flashButton(btnReset, "리셋됨");
-    gaEvent("roi_reset");
-  });
-
-  btnCsv?.addEventListener("click", () => {
-    if (!requireTurnstile()) return;
-    if (!lastResult) return alert("먼저 계산을 실행해 주세요.");
-    const csv = toCSV(lastResult);
-    downloadText(`roi-result-${todayStamp()}.csv`, csv);
-    gaEvent("roi_download_csv");
-  });
-
-  btnMdCopy?.addEventListener("click", async () => {
-    if (!requireTurnstile()) return;
-    ensureMdInitialized();
-    try {
-      await navigator.clipboard.writeText(mdText.value);
-      flashButton(btnMdCopy, "복사됨!");
-    } catch {
-      window.prompt("아래 내용을 복사하세요:", mdText.value);
-    }
-    gaEvent("roi_copy_markdown");
-  });
-
-  btnMdDl?.addEventListener("click", () => {
-    if (!requireTurnstile()) return;
-    ensureMdInitialized();
-    downloadText(`roi-review-${todayStamp()}.md`, mdText.value);
-    gaEvent("roi_download_md");
-  });
-
-  btnGhIssue?.addEventListener("click", () => {
-    if (!requireTurnstile()) return;
-    ensureMdInitialized();
-
-    const title = `[ROI] ${todayStamp()} 개선/버그 리포트`;
-    const body =
-      mdText.value +
-      `\n\n---\n### 자동 첨부\n` +
-      `- page: ${location.href}\n` +
-      `- ua: ${navigator.userAgent}\n` +
-      (lastResult?.summary
-        ? `- best: ${lastResult.summary.bestName} / 24M ${fmtWon(lastResult.summary.bestNet24)}\n`
-        : `- best: (계산 전)\n`);
-
-    const url = buildGithubIssueUrl(title, body);
-    window.open(url, "_blank", "noopener,noreferrer");
-    gaEvent("roi_open_github_issue");
-  });
-
-  // Markdown 로컬 자동 저장(나만 보기 강화)
-  if (mdText) {
-    const saved = localStorage.getItem("roi_md_draft");
-    if (saved && !mdText.value.trim()) mdText.value = saved;
-
-    mdText.addEventListener("input", () => {
-      try { localStorage.setItem("roi_md_draft", mdText.value); } catch {}
-    });
-  }
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  const t = new Date();
+  const name = `roi_${t.getFullYear()}${String(t.getMonth()+1).padStart(2,"0")}${String(t.getDate()).padStart(2,"0")}.csv`;
+  a.download = name;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
-// init
-renderInputs();
-ensureMdInitialized();
-attachHandlers();
-if (barHint) barHint.textContent = window.__ts_ok ? "계산 가능" : "Turnstile 완료 후 계산 가능";
+function resetAll() {
+  data = structuredClone(defaults);
+  save(data);
+  build();
+}
+
+shareBtn?.addEventListener("click", () => window.__ts_ok && copyShareLink());
+csvBtn?.addEventListener("click", () => window.__ts_ok && downloadCSV());
+resetBtn?.addEventListener("click", () => window.__ts_ok && resetAll());
+issueBtn?.addEventListener("click", () => {
+  if (!window.__ts_ok) return;
+  const url = buildIssueUrl();
+  window.open(url, "_blank", "noopener,noreferrer");
+});
+
+applyQuery();
+build();
