@@ -4,18 +4,30 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>ROI 시나리오 비교 계산기</title>
-    <meta name="description" content="초기 비용 + 월 순이익 기준으로 A/B/C ROI를 비교하는 초경량 계산기" />
+    <meta
+      name="description"
+      content="초기 비용 + 월 순이익 기준으로 A/B/C ROI를 비교하는 초경량 계산기"
+    />
 
     <link rel="stylesheet" href="./app.css" />
 
     <!-- Cloudflare Turnstile -->
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
 
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TCTM0SR4TJ"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-TCTM0SR4TJ"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+      function gtag() {
+        dataLayer.push(arguments);
+      }
       gtag("js", new Date());
       gtag("config", "G-TCTM0SR4TJ");
     </script>
@@ -30,8 +42,12 @@
         </div>
 
         <div class="actions">
-          <button id="shareBtn" type="button" class="btn ghost">공유 링크 복사</button>
-          <button id="csvBtn" type="button" class="btn ghost">CSV 다운로드</button>
+          <button id="shareBtn" type="button" class="btn ghost">
+            공유 링크 복사
+          </button>
+          <button id="csvBtn" type="button" class="btn ghost">
+            CSV 다운로드
+          </button>
           <button id="resetBtn" type="button" class="btn ghost">리셋</button>
         </div>
       </header>
@@ -40,7 +56,9 @@
       <section class="card tsCard">
         <div class="head">
           <h2>보안 확인</h2>
-          <div class="hint">의심 트래픽일 때만 확인이 뜹니다. 완료되면 입력이 활성화됩니다.</div>
+          <div class="hint">
+            의심 트래픽일 때만 확인이 뜹니다. 완료되면 입력이 활성화됩니다.
+          </div>
         </div>
 
         <div class="tsRow">
@@ -54,49 +72,53 @@
         </div>
       </section>
 
-      <!-- 결과 -->
+      <!-- 결과 카드 -->
       <section class="card">
         <div class="head">
           <h2>결과</h2>
-          <div class="meta" id="recommendRule">추천 기준: 24개월 누적 최대 → 손익분기 빠른 순</div>
+          <div class="meta" id="recommendRule">
+            추천 기준: 24개월 누적 최대 → 손익분기 빠른 순
+          </div>
         </div>
         <main class="grid" id="cards"></main>
       </section>
 
-      <!-- 결론 + CTA + 쿠팡 광고(카드 내부 배치) -->
+      <!-- 결론 + CTA + 쿠팡 광고(여기 고정) -->
       <section class="card conclusion">
         <div class="head">
           <h2>결론</h2>
         </div>
 
-        <div id="conclusionText" class="conclusionText">보안 확인 후 입력하면 추천이 표시됩니다.</div>
-
-        <div class="row" style="margin-top:12px;">
-          <!-- ✅ CTA 버튼 -->
-          <a id="ctaLink" class="btn" href="#" aria-disabled="true">보안 확인 후 이용 가능합니다</a>
+        <div id="conclusionText" class="conclusionText">
+          보안 확인 후 입력하면 추천이 표시됩니다.
         </div>
 
-        <!-- ✅ 쿠팡 파트너스(결론 카드 안으로 이동) -->
-        <div id="affiliateBox" class="affiliate-box" style="display:none;">
-          <div class="affiliate-title">추천 상품</div>
-
-          <!-- 쿠팡 파트너스 광고 스크립트 -->
-          <script src="https://ads-partners.coupang.com/g.js"></script>
-          <script>
-            new PartnersCoupang.G({
-              id: 951169,
-              template: "carousel",
-              trackingCode: "AF8969399",
-              width: "100%",
-              height: "260",
-              tsource: ""
-            });
-          </script>
-
-          <div class="affiliate-note">
-            * 파트너스 활동을 통해 일정액의 수수료를 제공받을 수 있습니다.
-          </div>
+        <!-- CTA -->
+        <div class="row" style="margin-top: 10px">
+          <a id="ctaLink" class="btn" href="#" target="_blank" rel="noopener noreferrer">
+            보안 확인 후 이용 가능합니다
+          </a>
         </div>
+
+        <!-- ✅ 쿠팡 광고: 결론 카드 안에서만 보이게 -->
+        <div class="adWrap" id="coupangAdWrap">
+          <div class="hint" style="margin-bottom: 8px">추천 상품</div>
+          <div id="coupangAd"></div>
+        </div>
+      </section>
+
+      <!-- 소개/면책 -->
+      <section class="card about">
+        <div class="head">
+          <h2>이 계산기는 누가 사용하면 좋을까요?</h2>
+        </div>
+        <p class="conclusionText">
+          초기 비용과 월 순이익을 비교하여 여러 시나리오의 ROI를 간단히 확인하고자 하는
+          창업·사업 준비자, 투자자 또는 부업을 고려하는 사람들에게 도움이 됩니다.
+        </p>
+        <p class="hint">
+          본 계산 결과는 참고용이며, 실제 결과는 상황에 따라 달라질 수 있습니다.
+        </p>
       </section>
 
       <!-- 개선/버그 제보 -->
@@ -105,15 +127,21 @@
           <h2>개선 제안/버그 제보</h2>
           <div class="hint">
             GitHub 이슈로 받습니다. 버튼 누르면
-            <a class="link" href="https://github.com/flowlab09/markdown/issues" target="_blank" rel="noopener noreferrer">
-              flowlab09/markdown
-            </a>
+            <a
+              class="link"
+              href="https://github.com/flowlab09/markdown/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              >flowlab09/markdown</a
+            >
             레포에 이슈가 생성됩니다.
           </div>
         </div>
 
         <div class="row">
-          <button id="issueBtn" type="button" class="btn">개선 제안/버그 제보 (GitHub 이슈)</button>
+          <button id="issueBtn" type="button" class="btn">
+            개선 제안/버그 제보 (GitHub 이슈)
+          </button>
         </div>
       </section>
 
@@ -122,14 +150,19 @@
         <div class="head">
           <h2>보안 제보</h2>
           <div class="hint">
-            보안 취약점은 GitHub 이슈로 받지 않습니다. 이메일로만 제보해주세요. (민감정보/토큰/시드 입력 금지)
+            보안 취약점은 GitHub 이슈로 받지 않습니다. 이메일로만 제보해주세요.
+            (민감정보/토큰/시드 입력 금지)
           </div>
         </div>
 
         <div class="row">
           <a id="securityMailBtn" class="btn" href="#">보안 이메일 열기</a>
-          <button id="copyMailBtn" class="btn ghost" type="button">이메일 복사</button>
-          <span class="pill" id="securityEmailText">roicalculator.official@gmail.com</span>
+          <button id="copyMailBtn" class="btn ghost" type="button">
+            이메일 복사
+          </button>
+          <span class="pill" id="securityEmailText"
+            >roicalculator.official@gmail.com</span
+          >
         </div>
       </section>
 
@@ -151,5 +184,30 @@
     </script>
 
     <script src="./app.js" defer></script>
+
+    <!-- ✅ 쿠팡 스크립트는 반드시 body 맨 아래(문서 안)에 -->
+    <script src="https://ads-partners.coupang.com/g.js"></script>
+    <script>
+      // 쿠팡 광고 생성 → 생성된 iframe을 #coupangAd 안으로 강제 이동(가장 안정적)
+      try {
+        new PartnersCoupang.G({
+          id: 951169, // 네 광고 ID
+          template: "carousel",
+          trackingCode: "AF8969399", // 네 추적 코드
+          width: "100%",
+          height: "160",
+        });
+      } catch (e) {}
+
+      // 쿠팡이 body에 붙여버리는 경우가 있어서 결론 카드 컨테이너로 이동
+      setTimeout(() => {
+        const wrap = document.getElementById("coupangAd");
+        if (!wrap) return;
+        const iframe = document.querySelector(
+          "iframe[src*='ads-partners.coupang.com']"
+        );
+        if (iframe) wrap.appendChild(iframe);
+      }, 400);
+    </script>
   </body>
 </html>

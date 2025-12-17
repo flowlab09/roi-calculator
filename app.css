@@ -73,7 +73,9 @@ h1{
 }
 .btn:hover{ background: rgba(90,160,255,0.18); }
 .btn:active{ transform: translateY(1px); }
-.btn.ghost{ background: rgba(255,255,255,0.06); }
+.btn.ghost{
+  background: rgba(255,255,255,0.06);
+}
 .btn:focus{ outline:none; box-shadow: var(--ring); }
 
 .card{
@@ -247,27 +249,23 @@ body.locked .conclusion,
 body.locked #csvBtn,
 body.locked #shareBtn,
 body.locked #resetBtn,
-body.locked #issueBtn{
+body.locked #issueBtn,
+body.locked #ctaLink{
   opacity: .58;
   filter: blur(1.2px);
   pointer-events: none;
 }
 
-/* ✅ 쿠팡(제휴) 박스 */
-.affiliate-box{
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
+/* ✅ 쿠팡 광고 카드 내부 고정 */
+.adWrap{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
-.affiliate-title{
-  font-weight: 900;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.affiliate-note{
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--muted);
-  opacity: .9;
+.adWrap iframe{
+  width: 100% !important;
+  max-width: 420px;
+  display: block;
+  margin: 0 auto;
+  border: 0 !important;
 }

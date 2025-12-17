@@ -5,8 +5,7 @@
    - Share link (state in URL)
    - Prefilled GitHub Issue -> flowlab09/markdown
    - Security report via mailto (Gmail fallback)
-   + CTA button update (ctaLink) for affiliate/SaaS
-   + Coupang affiliate box in conclusion card (affiliateBox)
+   + CTA button update (ctaLink)
 ========================================================= */
 
 const ISSUE_REPO = "flowlab09/markdown";
@@ -36,7 +35,6 @@ const el = {
   cards: document.getElementById("cards"),
   conclusionText: document.getElementById("conclusionText"),
   ctaLink: document.getElementById("ctaLink"),
-  affiliateBox: document.getElementById("affiliateBox"),
   shareBtn: document.getElementById("shareBtn"),
   resetBtn: document.getElementById("resetBtn"),
   csvBtn: document.getElementById("csvBtn"),
@@ -49,13 +47,13 @@ const el = {
    CTA (Affiliate / SaaS)
 ========================== */
 
-// TODO: 너의 제휴 링크로 교체
+// ✅ 여기에 네 CTA 링크로 교체
 const DEFAULT_CTA = {
   href: "https://example.com",
   text: "무료 체험으로 ROI 관리하기 →",
 };
 
-function getCtaForRecommendation(recIdx) {
+function getCtaForRecommendation(_recIdx) {
   return DEFAULT_CTA;
 }
 
@@ -79,19 +77,6 @@ function setCtaEnabled(recIdx) {
 }
 
 /* ==========================
-   Affiliate box visibility
-========================== */
-
-function setAffiliateHidden() {
-  if (!el.affiliateBox) return;
-  el.affiliateBox.style.display = "none";
-}
-function setAffiliateVisible() {
-  if (!el.affiliateBox) return;
-  el.affiliateBox.style.display = "block";
-}
-
-/* ==========================
    Guards / Formatters
 ========================== */
 
@@ -111,8 +96,7 @@ function formatWon(n) {
 }
 
 function formatMonths(n) {
-  if (!Number.isFinite(n)) return "회수 불가";
-  if (n === Infinity) return "회수 불가";
+  if (!Number.isFinite(n) || n === Infinity) return "회수 불가";
   return `${(Math.round(n * 10) / 10).toFixed(1)}개월`;
 }
 
@@ -210,8 +194,7 @@ function buildCard(i) {
 
     const idx = Number(card.dataset.idx);
     const key = e.target.id.startsWith("cost") ? "cost" : "profit";
-    const raw = e.target.value;
-    const normalized = normalizeNumber(raw);
+    const normalized = normalizeNumber(e.target.value);
 
     if (normalized === "") {
       state.scenarios[idx][key] = 0;
@@ -244,7 +227,8 @@ function render() {
     const badgeEl = document.getElementById(`badge-${i}`);
 
     if (profitEl) profitEl.textContent = formatWon(r.profit);
-    if (paybackEl) paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
+    if (paybackEl)
+      paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
     if (net24El) net24El.textContent = Number.isFinite(r.net24) ? formatWon(r.net24) : "-";
 
     if (!r.canPayback) {
@@ -258,16 +242,13 @@ function render() {
     if (badgeEl) badgeEl.style.display = i === recIdx && window.__ts_ok ? "inline-flex" : "none";
   });
 
-  // 결론/CTA/광고 노출 제어
   if (!window.__ts_ok) {
     el.conclusionText.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
     setCtaDisabled();
-    setAffiliateHidden();
     return;
   }
 
   setCtaEnabled(recIdx);
-  setAffiliateVisible();
 
   if (recIdx === -1) {
     el.conclusionText.textContent = "입력값을 조정하면 추천이 갱신됩니다.";
@@ -367,7 +348,6 @@ function toCsv() {
     const pay = r.canPayback ? (Math.round(r.paybackMonths * 10) / 10).toFixed(1) : "";
     const net = Number.isFinite(r.net24) ? Math.round(r.net24) : "";
     const rec = window.__ts_ok && i === recIdx ? "yes" : "no";
-
     lines.push([`"${s.name}"`, Math.round(r.cost), Math.round(r.profit), pay, net, rec].join(","));
   });
 
@@ -376,11 +356,9 @@ function toCsv() {
 
 function downloadCsv() {
   if (!tsGuard()) return;
-
   const csv = toCsv();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
   a.href = url;
   a.download = `roi-calculator_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -458,7 +436,6 @@ function openSecurityMail() {
       `&to=${encodeURIComponent(SECURITY_EMAIL)}` +
       `&su=${encodeURIComponent(SECURITY_SUBJECT)}` +
       `&body=${encodeURIComponent(SECURITY_BODY)}`;
-
     window.open(gmail, "_blank", "noopener,noreferrer");
   }, 350);
 }
@@ -494,12 +471,11 @@ document.addEventListener("DOMContentLoaded", () => {
   el.csvBtn?.addEventListener("click", downloadCsv);
   el.issueBtn?.addEventListener("click", openPrefilledIssue);
 
-  el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
+  el.securityMailBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openSecurityMail();
+  });
   el.copyMailBtn?.addEventListener("click", copySecurityMail);
 
-  // 초기 상태(통과 전): CTA/광고 숨김
-  if (!window.__ts_ok) {
-    setCtaDisabled();
-    setAffiliateHidden();
-  }
+  if (!window.__ts_ok) setCtaDisabled();
 });
