@@ -5,6 +5,7 @@
    - Share link (state in URL)
    - Prefilled GitHub Issue -> flowlab09/markdown
    - Security report via mailto (Gmail fallback)
+   + CTA button update (ctaLink) for affiliate/SaaS
 ========================================================= */
 
 const ISSUE_REPO = "flowlab09/markdown";
@@ -33,6 +34,7 @@ const state = {
 const el = {
   cards: document.getElementById("cards"),
   conclusionText: document.getElementById("conclusionText"),
+  ctaLink: document.getElementById("ctaLink"), // ✅ index.html에 추가한 CTA 버튼
   shareBtn: document.getElementById("shareBtn"),
   resetBtn: document.getElementById("resetBtn"),
   csvBtn: document.getElementById("csvBtn"),
@@ -40,6 +42,46 @@ const el = {
   securityMailBtn: document.getElementById("securityMailBtn"),
   copyMailBtn: document.getElementById("copyMailBtn"),
 };
+
+/* ==========================
+   CTA (Affiliate / SaaS)
+   - 일단 1개 링크로 고정
+   - 나중에 recIdx에 따라 분기 가능
+========================== */
+
+// TODO: 여기에 너의 SaaS 제휴 링크(PartnerStack/Impact 등) 넣어라
+const DEFAULT_CTA = {
+  href: "https://example.com", // <- 너 링크로 교체
+  text: "무료 체험으로 ROI 관리하기 →",
+};
+
+function getCtaForRecommendation(recIdx) {
+  // 지금은 고정 1개. 필요하면 recIdx 기준으로 분기.
+  return DEFAULT_CTA;
+}
+
+function setCtaDisabled() {
+  if (!el.ctaLink) return;
+  el.ctaLink.href = "#";
+  el.ctaLink.textContent = "보안 확인 후 이용 가능합니다";
+  el.ctaLink.setAttribute("aria-disabled", "true");
+  el.ctaLink.style.pointerEvents = "none";
+  el.ctaLink.style.opacity = "0.6";
+}
+
+function setCtaEnabled(recIdx) {
+  if (!el.ctaLink) return;
+  const cta = getCtaForRecommendation(recIdx);
+  el.ctaLink.href = cta.href;
+  el.ctaLink.textContent = cta.text;
+  el.ctaLink.removeAttribute("aria-disabled");
+  el.ctaLink.style.pointerEvents = "auto";
+  el.ctaLink.style.opacity = "1";
+}
+
+/* ==========================
+   Guards / Formatters
+========================== */
 
 function tsGuard() {
   if (!window.__ts_ok) {
@@ -69,15 +111,15 @@ function calcScenario(cost, profit) {
   const validCost = Number.isFinite(c) && c >= 0;
   const validProfit = Number.isFinite(p);
 
-  const payback = (validCost && validProfit && p > 0) ? (c / p) : Infinity;
-  const net24 = (validProfit ? (p * 24 - (validCost ? c : 0)) : NaN);
+  const payback = validCost && validProfit && p > 0 ? c / p : Infinity;
+  const net24 = validProfit ? p * 24 - (validCost ? c : 0) : NaN;
 
   return {
     cost: validCost ? c : 0,
     profit: validProfit ? p : 0,
     paybackMonths: payback,
     net24: Number.isFinite(net24) ? net24 : NaN,
-    canPayback: (validCost && validProfit && p > 0),
+    canPayback: validCost && validProfit && p > 0,
   };
 }
 
@@ -85,7 +127,7 @@ function pickRecommendation(rows) {
   // 추천 기준: 24개월 누적(net24) 최대, 동률이면 paybackMonths(작을수록) 우선
   const candidates = rows
     .map((r, idx) => ({ ...r, idx }))
-    .filter(r => Number.isFinite(r.net24)); // 최소 조건
+    .filter((r) => Number.isFinite(r.net24)); // 최소 조건
 
   if (candidates.length === 0) return -1;
 
@@ -94,9 +136,13 @@ function pickRecommendation(rows) {
     return a.paybackMonths - b.paybackMonths;
   });
 
-  // "결과값이 더 나은 것만" → 최고 1개만 추천
+  // 최고 1개만 추천
   return candidates[0].idx;
 }
+
+/* ==========================
+   UI Build / Render
+========================== */
 
 function buildCard(i) {
   const s = state.scenarios[i];
@@ -142,13 +188,13 @@ function buildCard(i) {
   costInput.value = String(s.cost);
   profitInput.value = String(s.profit);
 
-  // 입력 UX: 숫자만 남기고 콤마 자동
+  // 입력 UX: 숫자만 남기고 콤마 자동(정수 고정)
   const normalizeNumber = (v) => {
     const x = String(v).replace(/[^\d.-]/g, "");
     if (x === "" || x === "-" || x === "." || x === "-.") return "";
     const n = Number(x);
     if (!Number.isFinite(n)) return "";
-    return String(Math.trunc(n)); // 정수로 고정
+    return String(Math.trunc(n));
   };
 
   const onInput = (e) => {
@@ -165,11 +211,11 @@ function buildCard(i) {
     } else {
       const n = Number(normalized);
       state.scenarios[idx][key] = n;
-      e.target.value = normalized; // 커서 튐 최소화를 위해 우선 숫자만
+      e.target.value = normalized; // 커서 튐 최소화
     }
 
     render();
-    syncUrlState(); // 값 바꾸면 URL도 갱신
+    syncUrlState();
   };
 
   costInput.addEventListener("input", onInput);
@@ -179,7 +225,7 @@ function buildCard(i) {
 }
 
 function render() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
   rows.forEach((r, i) => {
@@ -190,7 +236,8 @@ function render() {
     const badgeEl = document.getElementById(`badge-${i}`);
 
     if (profitEl) profitEl.textContent = formatWon(r.profit);
-    if (paybackEl) paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
+    if (paybackEl)
+      paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
     if (net24El) net24El.textContent = Number.isFinite(r.net24) ? formatWon(r.net24) : "-";
 
     // 경고: 월 순이익 0 이하
@@ -202,15 +249,19 @@ function render() {
       warnEl.textContent = "";
     }
 
-    // 추천 배지: 최고 1개만
-    if (badgeEl) badgeEl.style.display = (i === recIdx && window.__ts_ok) ? "inline-flex" : "none";
+    // 추천 배지: 최고 1개만 (Turnstile 통과 후에만)
+    if (badgeEl) badgeEl.style.display = i === recIdx && window.__ts_ok ? "inline-flex" : "none";
   });
 
-  // 결론 문구: “여기까지만” 스타일로 간단히
+  // 결론/CTA
   if (!window.__ts_ok) {
     el.conclusionText.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
+    setCtaDisabled();
     return;
   }
+
+  // TS 통과하면 CTA는 기본 활성화
+  setCtaEnabled(recIdx);
 
   if (recIdx === -1) {
     el.conclusionText.textContent = "입력값을 조정하면 추천이 갱신됩니다.";
@@ -303,34 +354,19 @@ function resetAll() {
 ========================== */
 
 function toCsv() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
-  const header = [
-    "scenario",
-    "initial_cost",
-    "monthly_profit",
-    "payback_months",
-    "net_24_months",
-    "recommended"
-  ];
-
+  const header = ["scenario", "initial_cost", "monthly_profit", "payback_months", "net_24_months", "recommended"];
   const lines = [header.join(",")];
 
   state.scenarios.forEach((s, i) => {
     const r = rows[i];
     const pay = r.canPayback ? (Math.round(r.paybackMonths * 10) / 10).toFixed(1) : "";
     const net = Number.isFinite(r.net24) ? Math.round(r.net24) : "";
-    const rec = (window.__ts_ok && i === recIdx) ? "yes" : "no";
+    const rec = window.__ts_ok && i === recIdx ? "yes" : "no";
 
-    lines.push([
-      `"${s.name}"`,
-      Math.round(r.cost),
-      Math.round(r.profit),
-      pay,
-      net,
-      rec
-    ].join(","));
+    lines.push([`"${s.name}"`, Math.round(r.cost), Math.round(r.profit), pay, net, rec].join(","));
   });
 
   return lines.join("\n");
@@ -344,7 +380,7 @@ function downloadCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `roi-calculator_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `roi-calculator_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -356,17 +392,20 @@ function downloadCsv() {
 ========================== */
 
 function buildIssueBody() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
-  const bestLine = (window.__ts_ok && recIdx !== -1)
-    ? `> 현재 계산 기준 추천 시나리오: ${state.scenarios[recIdx].name} (24개월 누적 ${formatWon(rows[recIdx].net24)}, 손익분기 ${formatMonths(rows[recIdx].paybackMonths)}, 월 순이익 ${formatWon(rows[recIdx].profit)})\n`
-    : `> 보안 확인 후 입력하면 추천이 표시됩니다.\n`;
+  const bestLine =
+    window.__ts_ok && recIdx !== -1
+      ? `> 현재 계산 기준 추천 시나리오: ${state.scenarios[recIdx].name} (24개월 누적 ${formatWon(
+          rows[recIdx].net24
+        )}, 손익분기 ${formatMonths(rows[recIdx].paybackMonths)}, 월 순이익 ${formatWon(rows[recIdx].profit)})\n`
+      : `> 보안 확인 후 입력하면 추천이 표시됩니다.\n`;
 
   const lines = [];
   lines.push(bestLine);
   lines.push("\n## 현재 입력값");
-  state.scenarios.forEach((s, i) => {
+  state.scenarios.forEach((s) => {
     lines.push(`- ${s.name}: 초기비용 ${formatWon(Number(s.cost))}, 월순이익 ${formatWon(Number(s.profit))}`);
   });
 
@@ -457,49 +496,12 @@ document.addEventListener("DOMContentLoaded", () => {
   el.issueBtn?.addEventListener("click", openPrefilledIssue);
 
   // Security mail
-  el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
+  el.securityMailBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openSecurityMail();
+  });
   el.copyMailBtn?.addEventListener("click", copySecurityMail);
+
+  // CTA: TS 통과 전에는 비활성화 유지
+  if (!window.__ts_ok) setCtaDisabled();
 });
-// === GitHub Issue Feedback ===
-function kstDateYYYYMMDD() {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().slice(0, 10);
-}
-
-function buildGithubIssueUrl({ owner, repo, title, body }) {
-  const base = `https://github.com/${owner}/${repo}/issues/new`;
-  const params = new URLSearchParams();
-  params.set("title", title);
-  params.set("body", body);
-  return `${base}?${params.toString()}`;
-}
-
-function openRoiIssue() {
-  const owner = "flowlab09";
-  const repo = "markdown"; // 이슈 수집용 레포
-  const today = kstDateYYYYMMDD();
-  const pageUrl = window.location.href;
-
-  const title = `[ROI] ${today} 개선/버그 리포트`;
-
-  const body = [
-    `페이지: ${pageUrl}`,
-    ``,
-    `## 현재 상태 요약`,
-    `- 무엇이 문제인가:`,
-    `- 기대 동작:`,
-    `- 실제 동작:`,
-    ``,
-    `## 재현 방법`,
-    `1)`,
-    `2)`,
-    ``,
-    `## 참고`,
-    `- 스크린샷/영상:`,
-    `- 브라우저/기기:`,
-  ].join("\n");
-
-  const url = buildGithubIssueUrl({ owner, repo, title, body });
-  window.open(url, "_blank", "noopener,noreferrer");
-}
