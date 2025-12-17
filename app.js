@@ -460,3 +460,46 @@ document.addEventListener("DOMContentLoaded", () => {
   el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
   el.copyMailBtn?.addEventListener("click", copySecurityMail);
 });
+// === GitHub Issue Feedback ===
+function kstDateYYYYMMDD() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+function buildGithubIssueUrl({ owner, repo, title, body }) {
+  const base = `https://github.com/${owner}/${repo}/issues/new`;
+  const params = new URLSearchParams();
+  params.set("title", title);
+  params.set("body", body);
+  return `${base}?${params.toString()}`;
+}
+
+function openRoiIssue() {
+  const owner = "flowlab09";
+  const repo = "markdown"; // 이슈 수집용 레포
+  const today = kstDateYYYYMMDD();
+  const pageUrl = window.location.href;
+
+  const title = `[ROI] ${today} 개선/버그 리포트`;
+
+  const body = [
+    `페이지: ${pageUrl}`,
+    ``,
+    `## 현재 상태 요약`,
+    `- 무엇이 문제인가:`,
+    `- 기대 동작:`,
+    `- 실제 동작:`,
+    ``,
+    `## 재현 방법`,
+    `1)`,
+    `2)`,
+    ``,
+    `## 참고`,
+    `- 스크린샷/영상:`,
+    `- 브라우저/기기:`,
+  ].join("\n");
+
+  const url = buildGithubIssueUrl({ owner, repo, title, body });
+  window.open(url, "_blank", "noopener,noreferrer");
+}
