@@ -1,0 +1,312 @@
+﻿:root{
+  --bg: rgb(12,14,18);
+  --panel: rgba(18,22,30,0.9);
+  --card: rgba(20,26,36,0.88);
+  --border: rgba(255,255,255,0.10);
+  --border2: rgba(255,255,255,0.16);
+  --text: rgba(235,242,255,0.92);
+  --muted: rgba(176,190,215,0.85);
+  --danger: rgba(255,120,120,0.18);
+  --dangerText: rgba(255,160,160,0.95);
+  --shadow: 0 18px 60px rgba(0,0,0,0.45);
+  --ring: 0 0 0 3px rgba(90,160,255,0.25);
+  --r: 16px;
+  --gap: 14px;
+  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family: var(--font);
+  color: var(--text);
+  background: radial-gradient(1200px 700px at 20% 0%, rgba(70,120,255,0.12), transparent 55%),
+              radial-gradient(1000px 700px at 80% 10%, rgba(60,200,150,0.10), transparent 55%),
+              var(--bg);
+}
+
+.wrap{
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 22px 16px 40px;
+}
+
+.topbar{
+  display:flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items:flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+h1{
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+.sub{
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+.btn{
+  appearance:none;
+  border: 1px solid var(--border2);
+  background: rgba(90,160,255,0.12);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 750;
+  font-size: 13px;
+  transition: transform .05s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+}
+.btn:hover{ background: rgba(90,160,255,0.18); }
+.btn:active{ transform: translateY(1px); }
+.btn.ghost{ background: rgba(255,255,255,0.06); }
+.btn:focus{ outline:none; box-shadow: var(--ring); }
+
+/* a.btn 비활성 느낌(aria-disabled) */
+.btn[aria-disabled="true"]{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.head{
+  display:flex;
+  justify-content: space-between;
+  align-items:flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+h2{
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+.hint, .meta{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.link{ color: rgba(130,190,255,0.95); text-decoration: none; }
+.link:hover{ text-decoration: underline; }
+
+/* ===== 결과 카드 그리드 ===== */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+.scCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(10,14,20,0.22);
+  padding: 12px;
+  min-height: 240px;
+}
+
+.scHead{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.scTitle{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.scName{
+  font-weight: 900;
+  font-size: 14px;
+}
+.badge{
+  font-size: 11px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: rgba(60,200,150,0.12);
+}
+
+.field{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.labelRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+label{
+  font-size: 12px;
+  color: var(--muted);
+}
+input{
+  width: 100%;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+input:focus{ outline:none; box-shadow: var(--ring); border-color: rgba(90,160,255,0.45); }
+
+.kpis{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 8px;
+  column-gap: 10px;
+  font-size: 13px;
+}
+.kpis .k{ color: var(--muted); }
+.kpis .v{ font-weight: 850; text-align:right; }
+
+.warn{
+  margin-top: 12px;
+  border: 1px solid rgba(255,120,120,0.35);
+  background: var(--danger);
+  color: var(--dangerText);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ===== 결론 + CTA ===== */
+.conclusionText{
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* 결론 카드 내 CTA 정렬 */
+.conclusion .cta{
+  margin-top: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 제휴 고지(CTA/쿠팡 공용) */
+.affiliate-note{
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: .9;
+}
+
+/* ===== 소개/면책 about ===== */
+.about p{
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.about p:last-child{ margin-bottom: 0; }
+
+.disclaimer{
+  color: var(--muted);
+  font-size: 12px;
+  opacity: .88;
+}
+
+/* ===== 쿠팡 위젯 영역 ===== */
+#coupangWidget{
+  border: 1px dashed rgba(255,255,255,0.18);
+  border-radius: 14px;
+  background: rgba(0,0,0,0.12);
+  padding: 10px;
+  min-height: 120px;
+}
+
+/* ===== 공통 ===== */
+.row{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
+
+.pill{
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tsCard .tsRow{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+.tsNote{
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+}
+
+.footer{
+  margin-top: 18px;
+  text-align:center;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: .9;
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Turnstile 통과 전 잠금 */
+body.locked .grid,
+body.locked .conclusion,
+body.locked #csvBtn,
+body.locked #shareBtn,
+body.locked #resetBtn,
+body.locked #issueBtn{
+  opacity: .58;
+  filter: blur(1.2px);
+  pointer-events: none;
+}
+
+/* ✅ Turnstile 전에도 CTA는 “보이되 비활성”으로 두고 싶으면 아래 유지
+   - JS가 aria-disabled/pointer-events 처리함
+*/
+body.locked #ctaLink{
+  opacity: .6;
+  pointer-events: none;
+}
