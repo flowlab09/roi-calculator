@@ -73,14 +73,10 @@ h1{
 }
 .btn:hover{ background: rgba(90,160,255,0.18); }
 .btn:active{ transform: translateY(1px); }
-.btn.ghost{ background: rgba(255,255,255,0.06); }
-.btn:focus{ outline:none; box-shadow: var(--ring); }
-
-/* a.btn 비활성 느낌(aria-disabled) */
-.btn[aria-disabled="true"]{
-  opacity: .6;
-  cursor: not-allowed;
+.btn.ghost{
+  background: rgba(255,255,255,0.06);
 }
+.btn:focus{ outline:none; box-shadow: var(--ring); }
 
 .card{
   background: var(--card);
@@ -113,7 +109,6 @@ h2{
 .link{ color: rgba(130,190,255,0.95); text-decoration: none; }
 .link:hover{ text-decoration: underline; }
 
-/* ===== 결과 카드 그리드 ===== */
 .grid{
   display:grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -205,55 +200,12 @@ input:focus{ outline:none; box-shadow: var(--ring); border-color: rgba(90,160,25
   line-height: 1.4;
 }
 
-/* ===== 결론 + CTA ===== */
 .conclusionText{
   font-size: 13px;
   line-height: 1.55;
   color: var(--text);
 }
 
-/* 결론 카드 내 CTA 정렬 */
-.conclusion .cta{
-  margin-top: 12px;
-  display:flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* 제휴 고지(CTA/쿠팡 공용) */
-.affiliate-note{
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  opacity: .9;
-}
-
-/* ===== 소개/면책 about ===== */
-.about p{
-  margin: 0 0 10px;
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.about p:last-child{ margin-bottom: 0; }
-
-.disclaimer{
-  color: var(--muted);
-  font-size: 12px;
-  opacity: .88;
-}
-
-/* ===== 쿠팡 위젯 영역 ===== */
-#coupangWidget{
-  border: 1px dashed rgba(255,255,255,0.18);
-  border-radius: 14px;
-  background: rgba(0,0,0,0.12);
-  padding: 10px;
-  min-height: 120px;
-}
-
-/* ===== 공통 ===== */
 .row{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
 
 .pill{
@@ -297,16 +249,23 @@ body.locked .conclusion,
 body.locked #csvBtn,
 body.locked #shareBtn,
 body.locked #resetBtn,
-body.locked #issueBtn{
+body.locked #issueBtn,
+body.locked #ctaLink{
   opacity: .58;
   filter: blur(1.2px);
   pointer-events: none;
 }
 
-/* ✅ Turnstile 전에도 CTA는 “보이되 비활성”으로 두고 싶으면 아래 유지
-   - JS가 aria-disabled/pointer-events 처리함
-*/
-body.locked #ctaLink{
-  opacity: .6;
-  pointer-events: none;
+/* ✅ 쿠팡 광고 카드 내부 고정 */
+.adWrap{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.adWrap iframe{
+  width: 100% !important;
+  max-width: 420px;
+  display: block;
+  margin: 0 auto;
+  border: 0 !important;
 }
