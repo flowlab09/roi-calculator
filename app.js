@@ -6,6 +6,7 @@
    - Prefilled GitHub Issue -> flowlab09/markdown
    - Security report via mailto (Gmail fallback)
    + CTA button update (ctaLink) for affiliate/SaaS
+   + Coupang affiliate box in conclusion card (affiliateBox)
 ========================================================= */
 
 const ISSUE_REPO = "flowlab09/markdown";
@@ -34,7 +35,8 @@ const state = {
 const el = {
   cards: document.getElementById("cards"),
   conclusionText: document.getElementById("conclusionText"),
-  ctaLink: document.getElementById("ctaLink"), // ✅ index.html에 추가한 CTA 버튼
+  ctaLink: document.getElementById("ctaLink"),
+  affiliateBox: document.getElementById("affiliateBox"),
   shareBtn: document.getElementById("shareBtn"),
   resetBtn: document.getElementById("resetBtn"),
   csvBtn: document.getElementById("csvBtn"),
@@ -45,18 +47,15 @@ const el = {
 
 /* ==========================
    CTA (Affiliate / SaaS)
-   - 일단 1개 링크로 고정
-   - 나중에 recIdx에 따라 분기 가능
 ========================== */
 
-// TODO: 여기에 너의 SaaS 제휴 링크(PartnerStack/Impact 등) 넣어라
+// TODO: 너의 제휴 링크로 교체
 const DEFAULT_CTA = {
-  href: "https://example.com", // <- 너 링크로 교체
+  href: "https://example.com",
   text: "무료 체험으로 ROI 관리하기 →",
 };
 
 function getCtaForRecommendation(recIdx) {
-  // 지금은 고정 1개. 필요하면 recIdx 기준으로 분기.
   return DEFAULT_CTA;
 }
 
@@ -77,6 +76,19 @@ function setCtaEnabled(recIdx) {
   el.ctaLink.removeAttribute("aria-disabled");
   el.ctaLink.style.pointerEvents = "auto";
   el.ctaLink.style.opacity = "1";
+}
+
+/* ==========================
+   Affiliate box visibility
+========================== */
+
+function setAffiliateHidden() {
+  if (!el.affiliateBox) return;
+  el.affiliateBox.style.display = "none";
+}
+function setAffiliateVisible() {
+  if (!el.affiliateBox) return;
+  el.affiliateBox.style.display = "block";
 }
 
 /* ==========================
@@ -124,10 +136,9 @@ function calcScenario(cost, profit) {
 }
 
 function pickRecommendation(rows) {
-  // 추천 기준: 24개월 누적(net24) 최대, 동률이면 paybackMonths(작을수록) 우선
   const candidates = rows
     .map((r, idx) => ({ ...r, idx }))
-    .filter((r) => Number.isFinite(r.net24)); // 최소 조건
+    .filter((r) => Number.isFinite(r.net24));
 
   if (candidates.length === 0) return -1;
 
@@ -136,7 +147,6 @@ function pickRecommendation(rows) {
     return a.paybackMonths - b.paybackMonths;
   });
 
-  // 최고 1개만 추천
   return candidates[0].idx;
 }
 
@@ -184,11 +194,9 @@ function buildCard(i) {
   const costInput = card.querySelector(`#cost-${i}`);
   const profitInput = card.querySelector(`#profit-${i}`);
 
-  // 초기값
   costInput.value = String(s.cost);
   profitInput.value = String(s.profit);
 
-  // 입력 UX: 숫자만 남기고 콤마 자동(정수 고정)
   const normalizeNumber = (v) => {
     const x = String(v).replace(/[^\d.-]/g, "");
     if (x === "" || x === "-" || x === "." || x === "-.") return "";
@@ -211,7 +219,7 @@ function buildCard(i) {
     } else {
       const n = Number(normalized);
       state.scenarios[idx][key] = n;
-      e.target.value = normalized; // 커서 튐 최소화
+      e.target.value = normalized;
     }
 
     render();
@@ -236,11 +244,9 @@ function render() {
     const badgeEl = document.getElementById(`badge-${i}`);
 
     if (profitEl) profitEl.textContent = formatWon(r.profit);
-    if (paybackEl)
-      paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
+    if (paybackEl) paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
     if (net24El) net24El.textContent = Number.isFinite(r.net24) ? formatWon(r.net24) : "-";
 
-    // 경고: 월 순이익 0 이하
     if (!r.canPayback) {
       warnEl.style.display = "block";
       warnEl.textContent = "월 순이익이 0 이하라 손익분기 계산이 불가합니다.";
@@ -249,19 +255,19 @@ function render() {
       warnEl.textContent = "";
     }
 
-    // 추천 배지: 최고 1개만 (Turnstile 통과 후에만)
     if (badgeEl) badgeEl.style.display = i === recIdx && window.__ts_ok ? "inline-flex" : "none";
   });
 
-  // 결론/CTA
+  // 결론/CTA/광고 노출 제어
   if (!window.__ts_ok) {
     el.conclusionText.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
     setCtaDisabled();
+    setAffiliateHidden();
     return;
   }
 
-  // TS 통과하면 CTA는 기본 활성화
   setCtaEnabled(recIdx);
+  setAffiliateVisible();
 
   if (recIdx === -1) {
     el.conclusionText.textContent = "입력값을 조정하면 추천이 갱신됩니다.";
@@ -278,9 +284,7 @@ function render() {
 
 function mount() {
   el.cards.innerHTML = "";
-  for (let i = 0; i < 3; i++) {
-    el.cards.appendChild(buildCard(i));
-  }
+  for (let i = 0; i < 3; i++) el.cards.appendChild(buildCard(i));
   render();
 }
 
@@ -328,8 +332,7 @@ function loadStateFromUrl() {
 async function copyShareLink() {
   if (!tsGuard()) return;
   syncUrlState();
-  const url = window.location.href;
-  await navigator.clipboard.writeText(url);
+  await navigator.clipboard.writeText(window.location.href);
   alert("공유 링크를 복사했습니다.");
 }
 
@@ -337,7 +340,6 @@ function resetAll() {
   if (!tsGuard()) return;
   state.scenarios = structuredClone(DEFAULTS);
 
-  // 입력칸 반영
   state.scenarios.forEach((s, i) => {
     const costInput = document.getElementById(`cost-${i}`);
     const profitInput = document.getElementById(`profit-${i}`);
@@ -378,6 +380,7 @@ function downloadCsv() {
   const csv = toCsv();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = `roi-calculator_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -447,10 +450,8 @@ function openSecurityMail() {
     `?subject=${encodeURIComponent(SECURITY_SUBJECT)}` +
     `&body=${encodeURIComponent(SECURITY_BODY)}`;
 
-  // 1) mailto 시도
   window.location.href = mailto;
 
-  // 2) fallback: Gmail 작성 링크
   setTimeout(() => {
     const gmail =
       "https://mail.google.com/mail/?view=cm&fs=1" +
@@ -472,7 +473,6 @@ async function copySecurityMail() {
 ========================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // URL에서 state 로드 → 입력칸 반영
   const loaded = loadStateFromUrl();
 
   mount();
@@ -489,19 +489,17 @@ document.addEventListener("DOMContentLoaded", () => {
     syncUrlState();
   }
 
-  // Buttons
   el.shareBtn?.addEventListener("click", copyShareLink);
   el.resetBtn?.addEventListener("click", resetAll);
   el.csvBtn?.addEventListener("click", downloadCsv);
   el.issueBtn?.addEventListener("click", openPrefilledIssue);
 
-  // Security mail
-  el.securityMailBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openSecurityMail();
-  });
+  el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
   el.copyMailBtn?.addEventListener("click", copySecurityMail);
 
-  // CTA: TS 통과 전에는 비활성화 유지
-  if (!window.__ts_ok) setCtaDisabled();
+  // 초기 상태(통과 전): CTA/광고 숨김
+  if (!window.__ts_ok) {
+    setCtaDisabled();
+    setAffiliateHidden();
+  }
 });
