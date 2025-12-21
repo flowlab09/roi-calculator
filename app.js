@@ -1,433 +1,254 @@
 ﻿/* =========================================================
-   ROI Calculator Lite
-   - Turnstile gate
-   - CSV export
-   - Share link (state in URL)
-   - Prefilled GitHub Issue -> flowlab09/markdown
-   - Security report via mailto (Gmail fallback)
+   ROI SCENARIO MASTER - Core Logic Engine
 ========================================================= */
 
-const ISSUE_REPO = "flowlab09/markdown";
-const ISSUE_NEW_URL = `https://github.com/${ISSUE_REPO}/issues/new`;
-
-const SECURITY_EMAIL = "roicalculator.official@gmail.com";
-const SECURITY_SUBJECT = "[ROI Calculator] 보안 제보";
-const SECURITY_BODY =
-  "보안 제보 내용:\n\n" +
-  "- 취약점 요약:\n" +
-  "- 재현 방법:\n" +
-  "- 영향 범위:\n" +
-  "- 참고(스크린샷/링크):\n\n" +
-  "※ 비밀번호/토큰/지갑시드 등 민감정보는 절대 적지 마세요.\n";
-
-const DEFAULTS = [
-  { key: "A", name: "A안", cost: 500000, profit: 150000 },
-  { key: "B", name: "B안", cost: 900000, profit: 220000 },
-  { key: "C", name: "C안", cost: 1500000, profit: 320000 },
-];
-
-const state = {
-  scenarios: structuredClone(DEFAULTS),
-};
-
-const el = {
-  cards: document.getElementById("cards"),
-  conclusionText: document.getElementById("conclusionText"),
-  shareBtn: document.getElementById("shareBtn"),
-  resetBtn: document.getElementById("resetBtn"),
-  csvBtn: document.getElementById("csvBtn"),
-  issueBtn: document.getElementById("issueBtn"),
-  securityMailBtn: document.getElementById("securityMailBtn"),
-  copyMailBtn: document.getElementById("copyMailBtn"),
-};
-
-function tsGuard() {
-  if (!window.__ts_ok) {
-    alert("보안 확인 후 이용 가능합니다.");
-    return false;
-  }
-  return true;
-}
-
-function formatWon(n) {
-  if (!Number.isFinite(n)) return "-";
-  const sign = n < 0 ? "-" : "";
-  const abs = Math.abs(Math.round(n));
-  return `${sign}${abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`;
-}
-
-function formatMonths(n) {
-  if (!Number.isFinite(n) || n === Infinity) return "회수 불가";
-  return `${(Math.round(n * 10) / 10).toFixed(1)}개월`;
-}
-
-function calcScenario(cost, profit) {
-  const c = Number(cost);
-  const p = Number(profit);
-
-  const validCost = Number.isFinite(c) && c >= 0;
-  const validProfit = Number.isFinite(p);
-
-  const payback = (validCost && validProfit && p > 0) ? (c / p) : Infinity;
-  const net24 = (validProfit ? (p * 24 - (validCost ? c : 0)) : NaN);
-
-  return {
-    cost: validCost ? c : 0,
-    profit: validProfit ? p : 0,
-    paybackMonths: payback,
-    net24: Number.isFinite(net24) ? net24 : NaN,
-    canPayback: (validCost && validProfit && p > 0),
-  };
-}
-
-function pickRecommendation(rows) {
-  const candidates = rows
-    .map((r, idx) => ({ ...r, idx }))
-    .filter(r => Number.isFinite(r.net24));
-
-  if (candidates.length === 0) return -1;
-
-  candidates.sort((a, b) => {
-    if (b.net24 !== a.net24) return b.net24 - a.net24;
-    return a.paybackMonths - b.paybackMonths;
-  });
-
-  return candidates[0].idx;
-}
-
-function buildCard(i) {
-  const s = state.scenarios[i];
-  const card = document.createElement("section");
-  card.className = "scCard";
-  card.dataset.idx = String(i);
-
-  card.innerHTML = `
-    <div class="scHead">
-      <div class="scTitle">
-        <div class="scName">${s.name}</div>
-        <div class="badge" id="badge-${i}" style="display:none;">추천</div>
-      </div>
-    </div>
-
-    <div class="field">
-      <div class="labelRow">
-        <label for="cost-${i}">초기 비용(원)</label>
-      </div>
-      <input id="cost-${i}" inputmode="numeric" autocomplete="off" spellcheck="false" />
-    </div>
-
-    <div class="field">
-      <div class="labelRow">
-        <label for="profit-${i}">월 순이익(원)</label>
-      </div>
-      <input id="profit-${i}" inputmode="numeric" autocomplete="off" spellcheck="false" />
-    </div>
-
-    <div class="kpis" id="kpis-${i}">
-      <div class="k">월 순이익</div><div class="v" id="kpi-profit-${i}">-</div>
-      <div class="k">손익분기</div><div class="v" id="kpi-payback-${i}">-</div>
-      <div class="k">24개월 누적</div><div class="v" id="kpi-net24-${i}">-</div>
-    </div>
-
-    <div class="warn" id="warn-${i}" style="display:none;"></div>
-  `;
-
-  const costInput = card.querySelector(`#cost-${i}`);
-  const profitInput = card.querySelector(`#profit-${i}`);
-
-  costInput.value = String(s.cost);
-  profitInput.value = String(s.profit);
-
-  const normalizeNumber = (v) => {
-    const x = String(v).replace(/[^\d.-]/g, "");
-    if (x === "" || x === "-" || x === "." || x === "-.") return "";
-    const n = Number(x);
-    if (!Number.isFinite(n)) return "";
-    return String(Math.trunc(n));
-  };
-
-  const onInput = (e) => {
-    if (!tsGuard()) return;
-
-    const idx = Number(card.dataset.idx);
-    const key = e.target.id.startsWith("cost") ? "cost" : "profit";
-    const raw = e.target.value;
-    const normalized = normalizeNumber(raw);
-
-    if (normalized === "") {
-      state.scenarios[idx][key] = 0;
-      e.target.value = "";
-    } else {
-      const n = Number(normalized);
-      state.scenarios[idx][key] = n;
-      e.target.value = normalized;
+// 1. 다국어 및 산업 통계 데이터베이스
+const benchmarkData = {
+    ko: {
+        countryName: { ko: "대한민국", en: "KOREA" },
+        source: { ko: "출처: 통계청(KOSIS), 중소벤처기업부 (2023-2024)", en: "Source: Statistics Korea (KOSIS), MSS (2023-2024)" },
+        strategyNote: { ko: "한국 시장은 5년 생존율이 평균 20%대로 낮습니다. 장기적인 현금 흐름 관리가 최우선입니다.", en: "KR market survival is around 20% in 5yrs. Prioritize long-term cash flow management." },
+        industries: [
+            { id: "cafe", bep: 22, margin: "18.5%", s1: "62.4%", s5: "21.0%", cost: "1.2억", costEn: "120M" },
+            { id: "saas", bep: 34, margin: "42.0%", s1: "48.2%", s5: "15.5%", cost: "3.5억", costEn: "350M" },
+            { id: "ecommerce", bep: 9, margin: "12.3%", s1: "55.1%", s5: "18.2%", cost: "0.4억", costEn: "40M" },
+            { id: "food", bep: 18, margin: "24.1%", s1: "71.0%", s5: "20.5%", cost: "1.8억", costEn: "180M" },
+            { id: "edu", bep: 14, margin: "31.5%", s1: "78.2%", s5: "38.4%", cost: "0.9억", costEn: "90M" }
+        ]
+    },
+    us: {
+        countryName: { ko: "미국", en: "USA" },
+        source: { ko: "출처: 미국 중소기업청(SBA), 노동통계국(BLS) (2023-2024)", en: "Source: U.S. SBA, Bureau of Labor Statistics (2023-2024)" },
+        strategyNote: { ko: "미국 시장은 서비스 부문의 5년 생존율이 높습니다. 효율적인 규모 확장이 성공의 핵심입니다.", en: "US markets show higher survival in Service sectors. Efficient scaling is key to success." },
+        industries: [
+            { id: "cafe", bep: 18, margin: "15.2%", s1: "78.5%", s5: "45.0%", cost: "1.8억", costEn: "$150k" },
+            { id: "saas", bep: 42, margin: "65.0%", s1: "75.0%", s5: "25.0%", cost: "10억", costEn: "$850k" },
+            { id: "ecommerce", bep: 12, margin: "14.5%", s1: "65.0%", s5: "20.0%", cost: "0.4억", costEn: "$35k" },
+            { id: "food", bep: 24, margin: "18.0%", s1: "80.0%", s5: "30.0%", cost: "3.1억", costEn: "$250k" },
+            { id: "edu", bep: 16, margin: "28.5%", s1: "85.0%", s5: "55.0%", cost: "1.5억", costEn: "$120k" }
+        ]
     }
+};
 
-    render();
+const i18n = {
+    ko: {
+        title: "ROI 시나리오 마스터", subtitle: "국가별 실데이터 기반 정밀 비즈니스 도구", inputTitle: "변수 설정",
+        labelInitial: "초기 투자금 (CapEx)", labelRevenue: "목표 월 매출", resultRoi: "연 예상 ROI", resultProfit: "월 순수익",
+        chartTitle: "현금 흐름 정밀 분석", benchmarkTitle: "국가별 산업 표준 통계", colIndustry: "산업군", colBep: "평균 BEP",
+        colMargin: "이익률", colSurvival: "생존율 (1년/5년)", colCost: "평균 투자금", currency: "원", unit: "만",
+        targetMsg: "목표 수익을 드래그하여 조정하세요", goalLabel: "목표", monthSuffix: "개월", strategyTitle: "전략 노트",
+        tabScenario: "시나리오", industries: { cafe: "커피 전문점", saas: "IT/SaaS", ecommerce: "이커머스", food: "일반 음식점", edu: "교육 서비스" }
+    },
+    en: {
+        title: "ROI Scenario Master", subtitle: "Global Business Simulation Tool", inputTitle: "Variables",
+        labelInitial: "Initial CapEx", labelRevenue: "Target Revenue", resultRoi: "Annual ROI", resultProfit: "Monthly Net",
+        chartTitle: "Cash Flow Precision", benchmarkTitle: "Industry Standards by Country", colIndustry: "Industry", colBep: "Avg BEP",
+        colMargin: "Margin", colSurvival: "Survival (1y/5y)", colCost: "Avg Cost", currency: "$", unit: "k",
+        targetMsg: "Drag the line to adjust profit target", goalLabel: "GOAL", monthSuffix: "mo", strategyTitle: "Strategy Note",
+        tabScenario: "Scenario", industries: { cafe: "Coffee/Cafe", saas: "Tech SaaS", ecommerce: "E-commerce", food: "Restaurant", edu: "Education" }
+    }
+};
+
+// 2. 앱 상태 관리
+let state = {
+    lang: 'ko', country: 'ko', activeTab: 0, simMonths: 36, targetProfit: 50000000,
+    scenarios: [{ id: 1, initialCost: 100000000, monthlyRevenue: 25000000, monthlyFixedCost: 8000000, variableCostRate: 35 }]
+};
+
+// 3. 보안 로직 (Turnstile 콜백)
+window.onTurnstileSuccess = function() {
+    const statusEl = document.getElementById('tsStatus');
+    if (statusEl) {
+        statusEl.textContent = 'Verification Complete';
+        statusEl.classList.replace('text-slate-500', 'text-emerald-500');
+    }
+    setTimeout(() => {
+        const overlay = document.getElementById('securityOverlay');
+        if (overlay) overlay.classList.add('opacity-0', 'pointer-events-none');
+        document.body.classList.remove('locked');
+    }, 500);
+};
+
+// 4. 비즈니스 로직
+function setLang(l) { state.lang = l; updateUI(); }
+function setCountry(c) {
+    state.country = c;
+    state.targetProfit = (c === 'ko' ? 50000000 : 100000);
+    state.scenarios.forEach((s, idx) => {
+        s.initialCost = (c === 'ko' ? 100000000 : 150000);
+        s.monthlyRevenue = (c === 'ko' ? 25000000 : 35000);
+        s.monthlyFixedCost = (c === 'ko' ? 8000000 : 12000);
+    });
+    updateUI();
+}
+
+function calculateMetrics(s) {
+    const monthlyProfit = s.monthlyRevenue - s.monthlyFixedCost - (s.monthlyRevenue * (s.variableCostRate / 100));
+    const annualRoi = s.initialCost > 0 ? ((monthlyProfit * 12) / s.initialCost) * 100 : 0;
+    const timeline = Array.from({ length: state.simMonths + 1 }, (_, i) => (monthlyProfit * i) - s.initialCost);
+    return { monthlyProfit, annualRoi, timeline };
+}
+
+// 5. UI 렌더링 엔진
+function updateUI() {
+    const t = i18n[state.lang];
+    const b = benchmarkData[state.country];
+    const activeScenario = state.scenarios[state.activeTab];
+    const metrics = calculateMetrics(activeScenario);
+
+    // 텍스트 매핑
+    document.getElementById('ui-title').innerText = t.title;
+    document.getElementById('ui-subtitle').innerText = t.subtitle;
+    document.getElementById('ui-input-title').innerText = t.inputTitle;
+    document.getElementById('ui-label-initial').innerText = t.labelInitial;
+    document.getElementById('ui-label-revenue').innerText = t.labelRevenue;
+    document.getElementById('ui-result-roi').innerText = t.resultRoi;
+    document.getElementById('ui-result-profit').innerText = t.resultProfit;
+    document.getElementById('ui-strategy-title').innerText = t.strategyTitle;
+    document.getElementById('ui-chart-title').innerText = t.chartTitle;
+    document.getElementById('display-benchmark-title').innerText = `${t.benchmarkTitle} (${b.countryName[state.lang]})`;
+    document.getElementById('display-source').innerText = b.source[state.lang];
+    document.getElementById('display-strategy').innerText = b.strategyNote[state.lang];
+
+    // 버튼 액티브 상태
+    ['ko','us'].forEach(c => document.getElementById(`btn-country-${c}`).className = `px-6 py-3 rounded-xl text-xs font-black transition-all ${state.country === c ? 'bg-white/20 text-white shadow-xl border border-white/20' : 'text-slate-500'}`);
+    ['ko','en'].forEach(l => document.getElementById(`btn-lang-${l}`).className = `px-6 py-3 rounded-xl text-xs font-black transition-all ${state.lang === l ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-500'}`);
+
+    // 시나리오 탭
+    const tabContainer = document.getElementById('scenario-tabs');
+    tabContainer.innerHTML = '';
+    state.scenarios.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = `px-5 py-2.5 rounded-xl text-[10px] font-black transition-all ${state.activeTab === i ? 'bg-blue-600 text-white shadow-lg scale-110' : 'bg-white/5 text-slate-500'}`;
+        btn.innerText = `${t.tabScenario.toUpperCase()} ${i+1}`;
+        btn.onclick = () => { state.activeTab = i; updateUI(); };
+        tabContainer.appendChild(btn);
+    });
+
+    // 지표 출력
+    const denom = (state.country === 'ko' ? 10000 : 1000);
+    document.getElementById('display-initial').innerText = (activeScenario.initialCost / denom).toLocaleString() + t.unit;
+    document.getElementById('display-revenue').innerText = (activeScenario.monthlyRevenue / denom).toLocaleString() + t.unit;
+    document.getElementById('display-roi').innerText = metrics.annualRoi.toFixed(1) + "%";
+    document.getElementById('display-profit').innerText = (metrics.monthlyProfit / denom).toLocaleString() + t.unit;
+
+    // 기간 선택기
+    const mCont = document.getElementById('month-selectors');
+    mCont.innerHTML = '';
+    [12, 24, 36, 48].forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = `px-5 py-3 rounded-xl text-[10px] font-black transition ${state.simMonths === m ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-500'}`;
+        btn.innerText = `${m}M`;
+        btn.onclick = () => { state.simMonths = m; updateUI(); };
+        mCont.appendChild(btn);
+    });
+
+    // 통계 테이블
+    const tbody = document.getElementById('benchmark-body');
+    tbody.innerHTML = '';
+    b.industries.forEach(ind => {
+        const tr = document.createElement('tr');
+        tr.className = "group hover:bg-white/5 transition-colors";
+        tr.innerHTML = `<td class="py-6 font-bold text-white group-hover:text-blue-400">${t.industries[ind.id]}</td><td class="py-6 text-center text-[10px] font-black">${ind.bep}${t.monthSuffix}</td><td class="py-6 text-blue-400 font-black text-center">${ind.margin}</td><td class="py-6 text-center"><div class="flex items-center justify-center gap-2"><span class="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black rounded-lg">${ind.s1}</span><span class="px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-black rounded-lg">${ind.s5}</span></div></td><td class="py-6 text-right font-black text-slate-300">${state.lang === 'ko' ? ind.cost : ind.costEn}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    lucide.createIcons();
+    renderChart();
     syncUrlState();
-  };
-
-  costInput.addEventListener("input", onInput);
-  profitInput.addEventListener("input", onInput);
-
-  return card;
 }
 
-function render() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
-  const recIdx = pickRecommendation(rows);
+// 6. SVG 차트 인터랙션 엔진
+function renderChart() {
+    const svg = document.getElementById('main-svg');
+    if (!svg) return;
+    svg.innerHTML = '';
+    const width = 1000, height = 350, padding = 50;
+    const t = i18n[state.lang];
+    const allScenarios = state.scenarios.map(s => calculateMetrics(s));
+    const maxVal = Math.max(...allScenarios.flatMap(m => m.timeline), state.targetProfit, 100000);
+    const minVal = Math.min(...allScenarios.flatMap(m => m.timeline), -100000);
+    const range = maxVal - minVal;
 
-  rows.forEach((r, i) => {
-    const profitEl = document.getElementById(`kpi-profit-${i}`);
-    const paybackEl = document.getElementById(`kpi-payback-${i}`);
-    const net24El = document.getElementById(`kpi-net24-${i}`);
-    const warnEl = document.getElementById(`warn-${i}`);
-    const badgeEl = document.getElementById(`badge-${i}`);
+    const getX = (m) => (m / state.simMonths) * (width - padding * 2) + padding;
+    const getY = (v) => height - ((v - minVal) / range) * (height - padding * 2) - padding;
 
-    if (profitEl) profitEl.textContent = formatWon(r.profit);
-    if (paybackEl) paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
-    if (net24El) net24El.textContent = Number.isFinite(r.net24) ? formatWon(r.net24) : "-";
+    // 제로 라인
+    const zeroLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    zeroLine.setAttribute("x1", padding); zeroLine.setAttribute("y1", getY(0)); zeroLine.setAttribute("x2", width - padding); zeroLine.setAttribute("y2", getY(0));
+    zeroLine.setAttribute("stroke", "rgba(255,255,255,0.1)"); zeroLine.setAttribute("stroke-width", "2"); zeroLine.setAttribute("stroke-dasharray", "10 5");
+    svg.appendChild(zeroLine);
 
-    if (!r.canPayback) {
-      warnEl.style.display = "block";
-      warnEl.textContent = "월 순이익이 0 이하라 손익분기 계산이 불가합니다.";
-    } else {
-      warnEl.style.display = "none";
-      warnEl.textContent = "";
-    }
+    // 목표 수익 라인
+    const tLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tLine.setAttribute("x1", padding); tLine.setAttribute("y1", getY(state.targetProfit)); tLine.setAttribute("x2", width - padding); tLine.setAttribute("y2", getY(state.targetProfit));
+    tLine.setAttribute("stroke", "#f43f5e"); tLine.setAttribute("stroke-width", "3"); tLine.setAttribute("stroke-dasharray", "5 3");
+    svg.appendChild(tLine);
 
-    if (badgeEl) badgeEl.style.display = (i === recIdx && window.__ts_ok) ? "inline-flex" : "none";
-  });
+    const tText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    tText.setAttribute("x", width - padding - 60); tText.setAttribute("y", getY(state.targetProfit) + 6);
+    tText.setAttribute("fill", "#f43f5e"); tText.setAttribute("font-size", "12"); tText.setAttribute("text-anchor", "middle"); tText.setAttribute("font-weight", "900");
+    tText.textContent = `${t.goalLabel}: ${(state.targetProfit / (state.country === 'ko' ? 10000 : 1000)).toLocaleString()}${t.unit}`;
+    svg.appendChild(tText);
 
-  if (!window.__ts_ok) {
-    el.conclusionText.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
-    return;
-  }
+    // 곡선 렌더링
+    const colors = ["#3b82f6", "#10b981", "#f59e0b"];
+    allScenarios.forEach((m, idx) => {
+        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        poly.setAttribute("fill", "none"); poly.setAttribute("stroke", colors[idx]); poly.setAttribute("stroke-width", "6");
+        poly.setAttribute("points", m.timeline.map((v, i) => `${getX(i)},${getY(v)}`).join(' '));
+        poly.setAttribute("stroke-linejoin", "round"); poly.setAttribute("stroke-linecap", "round");
+        svg.appendChild(poly);
+    });
 
-  if (recIdx === -1) {
-    el.conclusionText.textContent = "입력값을 조정하면 추천이 갱신됩니다.";
-    return;
-  }
+    // 드래그 및 호버 처리
+    const overlay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    overlay.setAttribute("width", width); overlay.setAttribute("height", height); overlay.setAttribute("fill", "transparent");
+    svg.appendChild(overlay);
 
-  const best = rows[recIdx];
-  const bestName = state.scenarios[recIdx].name;
-
-  el.conclusionText.textContent =
-    `현재 계산 기준 추천 시나리오: ${bestName} ` +
-    `(24개월 누적 ${formatWon(best.net24)}, 손익분기 ${formatMonths(best.paybackMonths)}, 월 순이익 ${formatWon(best.profit)})`;
+    overlay.onmousemove = (e) => {
+        const rect = svg.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width * width;
+        const y = (e.clientY - rect.top) / rect.height * height;
+        if (e.buttons === 1) {
+            state.targetProfit = Math.round((maxVal - ((y - padding) / (height - padding * 2)) * range) / 5000) * 5000;
+            renderChart();
+        }
+        const m = Math.round(((x - padding) / (width - padding * 2)) * state.simMonths);
+        if (m >= 0 && m <= state.simMonths) showTooltip(m, getX(m));
+    };
+    overlay.onmouseleave = hideTooltip;
 }
 
-function mount() {
-  el.cards.innerHTML = "";
-  for (let i = 0; i < 3; i++) {
-    el.cards.appendChild(buildCard(i));
-  }
-  render();
+function showTooltip(month, svgX) {
+    const tooltip = document.getElementById('chart-tooltip');
+    const t = i18n[state.lang];
+    tooltip.classList.remove('hidden');
+    tooltip.style.left = `${(svgX / 1000) * 100}%`;
+    tooltip.style.transform = 'translateX(-50%)';
+    let content = `<p class="text-[11px] font-black mb-4 opacity-40 uppercase tracking-[0.2em] text-white">${month}${t.monthSuffix}</p>`;
+    state.scenarios.forEach((s, idx) => {
+        const metrics = calculateMetrics(s);
+        content += `<div class="flex justify-between items-center gap-8 mb-2.5 text-white"><span class="text-[10px] font-black opacity-70 uppercase">${t.tabScenario} ${idx+1}</span><span class="text-base font-black ${["text-blue-500", "text-emerald-500", "text-amber-500"][idx]} tracking-tighter text-nowrap">${(metrics.timeline[month] / (state.country === 'ko' ? 10000 : 1000)).toLocaleString()}${t.unit}</span></div>`;
+    });
+    tooltip.innerHTML = content;
 }
 
-/* ==========================
-   Share / URL state
-========================== */
+function hideTooltip() { document.getElementById('chart-tooltip').classList.add('hidden'); }
 
-function encodeStateToQuery() {
-  const q = new URLSearchParams();
-  state.scenarios.forEach((s, i) => {
-    q.set(`c${i}`, String(s.cost ?? 0));
-    q.set(`p${i}`, String(s.profit ?? 0));
-  });
-  return q.toString();
-}
-
+// 7. 보안 관리 (URL State)
 function syncUrlState() {
-  const qs = encodeStateToQuery();
-  const url = new URL(window.location.href);
-  url.search = qs;
-  window.history.replaceState(null, "", url.toString());
+    try {
+        if (window.location.protocol === 'blob:' || window.location.protocol === 'about:') return;
+        const q = new URLSearchParams();
+        state.scenarios.forEach((s, i) => { q.set(`c${i}`, s.initialCost); q.set(`r${i}`, s.monthlyRevenue); });
+        window.history.replaceState(null, '', window.location.pathname + '?' + q.toString());
+    } catch (e) {}
 }
-
-function loadStateFromUrl() {
-  const url = new URL(window.location.href);
-  const sp = url.searchParams;
-  let changed = false;
-
-  state.scenarios.forEach((s, i) => {
-    const c = sp.get(`c${i}`);
-    const p = sp.get(`p${i}`);
-    if (c !== null && c !== "" && Number.isFinite(Number(c))) {
-      s.cost = Number(c);
-      changed = true;
-    }
-    if (p !== null && p !== "" && Number.isFinite(Number(p))) {
-      s.profit = Number(p);
-      changed = true;
-    }
-  });
-
-  return changed;
-}
-
-async function copyShareLink() {
-  if (!tsGuard()) return;
-  syncUrlState();
-  const url = window.location.href;
-  await navigator.clipboard.writeText(url);
-  alert("공유 링크를 복사했습니다.");
-}
-
-function resetAll() {
-  if (!tsGuard()) return;
-  state.scenarios = structuredClone(DEFAULTS);
-
-  state.scenarios.forEach((s, i) => {
-    const costInput = document.getElementById(`cost-${i}`);
-    const profitInput = document.getElementById(`profit-${i}`);
-    if (costInput) costInput.value = String(s.cost);
-    if (profitInput) profitInput.value = String(s.profit);
-  });
-
-  render();
-  syncUrlState();
-}
-
-/* ==========================
-   CSV export
-========================== */
-
-function toCsv() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
-  const recIdx = pickRecommendation(rows);
-
-  const header = ["scenario","initial_cost","monthly_profit","payback_months","net_24_months","recommended"];
-  const lines = [header.join(",")];
-
-  state.scenarios.forEach((s, i) => {
-    const r = rows[i];
-    const pay = r.canPayback ? (Math.round(r.paybackMonths * 10) / 10).toFixed(1) : "";
-    const net = Number.isFinite(r.net24) ? Math.round(r.net24) : "";
-    const rec = (window.__ts_ok && i === recIdx) ? "yes" : "no";
-
-    lines.push([`"${s.name}"`, Math.round(r.cost), Math.round(r.profit), pay, net, rec].join(","));
-  });
-
-  return lines.join("\n");
-}
-
-function downloadCsv() {
-  if (!tsGuard()) return;
-
-  const csv = toCsv();
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `roi-calculator_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/* ==========================
-   GitHub Issue (prefilled)
-========================== */
-
-function buildIssueBody() {
-  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
-  const recIdx = pickRecommendation(rows);
-
-  const bestLine = (window.__ts_ok && recIdx !== -1)
-    ? `> 현재 계산 기준 추천 시나리오: ${state.scenarios[recIdx].name} (24개월 누적 ${formatWon(rows[recIdx].net24)}, 손익분기 ${formatMonths(rows[recIdx].paybackMonths)}, 월 순이익 ${formatWon(rows[recIdx].profit)})\n`
-    : `> 보안 확인 후 입력하면 추천이 표시됩니다.\n`;
-
-  const lines = [];
-  lines.push(bestLine);
-  lines.push("\n## 현재 입력값");
-  state.scenarios.forEach((s) => {
-    lines.push(`- ${s.name}: 초기비용 ${formatWon(Number(s.cost))}, 월순이익 ${formatWon(Number(s.profit))}`);
-  });
-
-  lines.push("\n## 현재 상태 요약");
-  lines.push("- 무엇이 문제인가:");
-  lines.push("- 기대 동작:");
-  lines.push("- 실제 동작:");
-
-  lines.push("\n## 개선 아이디어");
-  lines.push("- ");
-
-  lines.push("\n## 환경");
-  lines.push(`- URL: ${window.location.href}`);
-  lines.push("- 브라우저/OS:");
-
-  return lines.join("\n");
-}
-
-function openPrefilledIssue() {
-  if (!tsGuard()) return;
-
-  const title = "[ROI] 개선/버그 제보";
-  const body = buildIssueBody();
-
-  const url = new URL(ISSUE_NEW_URL);
-  url.searchParams.set("title", title);
-  url.searchParams.set("body", body);
-
-  window.open(url.toString(), "_blank", "noopener,noreferrer");
-}
-
-/* ==========================
-   Security mail (mailto -> Gmail fallback)
-========================== */
-
-function openSecurityMail() {
-  const mailto =
-    `mailto:${encodeURIComponent(SECURITY_EMAIL)}` +
-    `?subject=${encodeURIComponent(SECURITY_SUBJECT)}` +
-    `&body=${encodeURIComponent(SECURITY_BODY)}`;
-
-  window.location.href = mailto;
-
-  setTimeout(() => {
-    const gmail =
-      "https://mail.google.com/mail/?view=cm&fs=1" +
-      `&to=${encodeURIComponent(SECURITY_EMAIL)}` +
-      `&su=${encodeURIComponent(SECURITY_SUBJECT)}` +
-      `&body=${encodeURIComponent(SECURITY_BODY)}`;
-
-    window.open(gmail, "_blank", "noopener,noreferrer");
-  }, 350);
-}
-
-async function copySecurityMail() {
-  await navigator.clipboard.writeText(SECURITY_EMAIL);
-  alert("보안 제보 이메일을 복사했습니다.");
-}
-
-/* ==========================
-   Bind
-========================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const loaded = loadStateFromUrl();
-
-  mount();
-
-  if (loaded) {
-    state.scenarios.forEach((s, i) => {
-      const costInput = document.getElementById(`cost-${i}`);
-      const profitInput = document.getElementById(`profit-${i}`);
-      if (costInput) costInput.value = String(s.cost);
-      if (profitInput) profitInput.value = String(s.profit);
-    });
-    render();
-  } else {
-    syncUrlState();
-  }
-
-  el.shareBtn?.addEventListener("click", copyShareLink);
-  el.resetBtn?.addEventListener("click", resetAll);
-  el.csvBtn?.addEventListener("click", downloadCsv);
-  el.issueBtn?.addEventListener("click", openPrefilledIssue);
-
-  el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
-  el.copyMailBtn?.addEventListener("click", copySecurityMail);
+    updateUI();
+    document.getElementById('input-initial').oninput = (e) => { state.scenarios[state.activeTab].initialCost = Number(e.target.value); updateUI(); };
+    document.getElementById('input-revenue').oninput = (e) => { state.scenarios[state.activeTab].monthlyRevenue = Number(e.target.value); updateUI(); };
+    document.getElementById('resetBtn').onclick = () => { if(confirm('Reset?')) location.reload(); };
 });
