@@ -5,7 +5,6 @@
    - Share link (state in URL)
    - Prefilled GitHub Issue -> flowlab09/markdown
    - Security report via mailto (Gmail fallback)
-   + CTA button update (ctaLink)
 ========================================================= */
 
 const ISSUE_REPO = "flowlab09/markdown";
@@ -34,7 +33,6 @@ const state = {
 const el = {
   cards: document.getElementById("cards"),
   conclusionText: document.getElementById("conclusionText"),
-  ctaLink: document.getElementById("ctaLink"),
   shareBtn: document.getElementById("shareBtn"),
   resetBtn: document.getElementById("resetBtn"),
   csvBtn: document.getElementById("csvBtn"),
@@ -42,43 +40,6 @@ const el = {
   securityMailBtn: document.getElementById("securityMailBtn"),
   copyMailBtn: document.getElementById("copyMailBtn"),
 };
-
-/* ==========================
-   CTA (Affiliate / SaaS)
-========================== */
-
-// ✅ 여기에 네 CTA 링크로 교체
-const DEFAULT_CTA = {
-  href: "https://example.com",
-  text: "무료 체험으로 ROI 관리하기 →",
-};
-
-function getCtaForRecommendation(_recIdx) {
-  return DEFAULT_CTA;
-}
-
-function setCtaDisabled() {
-  if (!el.ctaLink) return;
-  el.ctaLink.href = "#";
-  el.ctaLink.textContent = "보안 확인 후 이용 가능합니다";
-  el.ctaLink.setAttribute("aria-disabled", "true");
-  el.ctaLink.style.pointerEvents = "none";
-  el.ctaLink.style.opacity = "0.6";
-}
-
-function setCtaEnabled(recIdx) {
-  if (!el.ctaLink) return;
-  const cta = getCtaForRecommendation(recIdx);
-  el.ctaLink.href = cta.href;
-  el.ctaLink.textContent = cta.text;
-  el.ctaLink.removeAttribute("aria-disabled");
-  el.ctaLink.style.pointerEvents = "auto";
-  el.ctaLink.style.opacity = "1";
-}
-
-/* ==========================
-   Guards / Formatters
-========================== */
 
 function tsGuard() {
   if (!window.__ts_ok) {
@@ -107,22 +68,22 @@ function calcScenario(cost, profit) {
   const validCost = Number.isFinite(c) && c >= 0;
   const validProfit = Number.isFinite(p);
 
-  const payback = validCost && validProfit && p > 0 ? c / p : Infinity;
-  const net24 = validProfit ? p * 24 - (validCost ? c : 0) : NaN;
+  const payback = (validCost && validProfit && p > 0) ? (c / p) : Infinity;
+  const net24 = (validProfit ? (p * 24 - (validCost ? c : 0)) : NaN);
 
   return {
     cost: validCost ? c : 0,
     profit: validProfit ? p : 0,
     paybackMonths: payback,
     net24: Number.isFinite(net24) ? net24 : NaN,
-    canPayback: validCost && validProfit && p > 0,
+    canPayback: (validCost && validProfit && p > 0),
   };
 }
 
 function pickRecommendation(rows) {
   const candidates = rows
     .map((r, idx) => ({ ...r, idx }))
-    .filter((r) => Number.isFinite(r.net24));
+    .filter(r => Number.isFinite(r.net24));
 
   if (candidates.length === 0) return -1;
 
@@ -133,10 +94,6 @@ function pickRecommendation(rows) {
 
   return candidates[0].idx;
 }
-
-/* ==========================
-   UI Build / Render
-========================== */
 
 function buildCard(i) {
   const s = state.scenarios[i];
@@ -194,7 +151,8 @@ function buildCard(i) {
 
     const idx = Number(card.dataset.idx);
     const key = e.target.id.startsWith("cost") ? "cost" : "profit";
-    const normalized = normalizeNumber(e.target.value);
+    const raw = e.target.value;
+    const normalized = normalizeNumber(raw);
 
     if (normalized === "") {
       state.scenarios[idx][key] = 0;
@@ -216,7 +174,7 @@ function buildCard(i) {
 }
 
 function render() {
-  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
   rows.forEach((r, i) => {
@@ -227,8 +185,7 @@ function render() {
     const badgeEl = document.getElementById(`badge-${i}`);
 
     if (profitEl) profitEl.textContent = formatWon(r.profit);
-    if (paybackEl)
-      paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
+    if (paybackEl) paybackEl.textContent = r.canPayback ? formatMonths(r.paybackMonths) : "회수 불가";
     if (net24El) net24El.textContent = Number.isFinite(r.net24) ? formatWon(r.net24) : "-";
 
     if (!r.canPayback) {
@@ -239,16 +196,13 @@ function render() {
       warnEl.textContent = "";
     }
 
-    if (badgeEl) badgeEl.style.display = i === recIdx && window.__ts_ok ? "inline-flex" : "none";
+    if (badgeEl) badgeEl.style.display = (i === recIdx && window.__ts_ok) ? "inline-flex" : "none";
   });
 
   if (!window.__ts_ok) {
     el.conclusionText.textContent = "보안 확인 후 입력하면 추천이 표시됩니다.";
-    setCtaDisabled();
     return;
   }
-
-  setCtaEnabled(recIdx);
 
   if (recIdx === -1) {
     el.conclusionText.textContent = "입력값을 조정하면 추천이 갱신됩니다.";
@@ -265,7 +219,9 @@ function render() {
 
 function mount() {
   el.cards.innerHTML = "";
-  for (let i = 0; i < 3; i++) el.cards.appendChild(buildCard(i));
+  for (let i = 0; i < 3; i++) {
+    el.cards.appendChild(buildCard(i));
+  }
   render();
 }
 
@@ -313,7 +269,8 @@ function loadStateFromUrl() {
 async function copyShareLink() {
   if (!tsGuard()) return;
   syncUrlState();
-  await navigator.clipboard.writeText(window.location.href);
+  const url = window.location.href;
+  await navigator.clipboard.writeText(url);
   alert("공유 링크를 복사했습니다.");
 }
 
@@ -337,17 +294,18 @@ function resetAll() {
 ========================== */
 
 function toCsv() {
-  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
-  const header = ["scenario", "initial_cost", "monthly_profit", "payback_months", "net_24_months", "recommended"];
+  const header = ["scenario","initial_cost","monthly_profit","payback_months","net_24_months","recommended"];
   const lines = [header.join(",")];
 
   state.scenarios.forEach((s, i) => {
     const r = rows[i];
     const pay = r.canPayback ? (Math.round(r.paybackMonths * 10) / 10).toFixed(1) : "";
     const net = Number.isFinite(r.net24) ? Math.round(r.net24) : "";
-    const rec = window.__ts_ok && i === recIdx ? "yes" : "no";
+    const rec = (window.__ts_ok && i === recIdx) ? "yes" : "no";
+
     lines.push([`"${s.name}"`, Math.round(r.cost), Math.round(r.profit), pay, net, rec].join(","));
   });
 
@@ -356,12 +314,13 @@ function toCsv() {
 
 function downloadCsv() {
   if (!tsGuard()) return;
+
   const csv = toCsv();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `roi-calculator_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `roi-calculator_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -373,15 +332,12 @@ function downloadCsv() {
 ========================== */
 
 function buildIssueBody() {
-  const rows = state.scenarios.map((s) => calcScenario(s.cost, s.profit));
+  const rows = state.scenarios.map(s => calcScenario(s.cost, s.profit));
   const recIdx = pickRecommendation(rows);
 
-  const bestLine =
-    window.__ts_ok && recIdx !== -1
-      ? `> 현재 계산 기준 추천 시나리오: ${state.scenarios[recIdx].name} (24개월 누적 ${formatWon(
-          rows[recIdx].net24
-        )}, 손익분기 ${formatMonths(rows[recIdx].paybackMonths)}, 월 순이익 ${formatWon(rows[recIdx].profit)})\n`
-      : `> 보안 확인 후 입력하면 추천이 표시됩니다.\n`;
+  const bestLine = (window.__ts_ok && recIdx !== -1)
+    ? `> 현재 계산 기준 추천 시나리오: ${state.scenarios[recIdx].name} (24개월 누적 ${formatWon(rows[recIdx].net24)}, 손익분기 ${formatMonths(rows[recIdx].paybackMonths)}, 월 순이익 ${formatWon(rows[recIdx].profit)})\n`
+    : `> 보안 확인 후 입력하면 추천이 표시됩니다.\n`;
 
   const lines = [];
   lines.push(bestLine);
@@ -436,6 +392,7 @@ function openSecurityMail() {
       `&to=${encodeURIComponent(SECURITY_EMAIL)}` +
       `&su=${encodeURIComponent(SECURITY_SUBJECT)}` +
       `&body=${encodeURIComponent(SECURITY_BODY)}`;
+
     window.open(gmail, "_blank", "noopener,noreferrer");
   }, 350);
 }
@@ -471,11 +428,6 @@ document.addEventListener("DOMContentLoaded", () => {
   el.csvBtn?.addEventListener("click", downloadCsv);
   el.issueBtn?.addEventListener("click", openPrefilledIssue);
 
-  el.securityMailBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openSecurityMail();
-  });
+  el.securityMailBtn?.addEventListener("click", (e) => { e.preventDefault(); openSecurityMail(); });
   el.copyMailBtn?.addEventListener("click", copySecurityMail);
-
-  if (!window.__ts_ok) setCtaDisabled();
 });

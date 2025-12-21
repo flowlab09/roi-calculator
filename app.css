@@ -73,9 +73,7 @@ h1{
 }
 .btn:hover{ background: rgba(90,160,255,0.18); }
 .btn:active{ transform: translateY(1px); }
-.btn.ghost{
-  background: rgba(255,255,255,0.06);
-}
+.btn.ghost{ background: rgba(255,255,255,0.06); }
 .btn:focus{ outline:none; box-shadow: var(--ring); }
 
 .card{
@@ -243,29 +241,36 @@ input:focus{ outline:none; box-shadow: var(--ring); border-color: rgba(90,160,25
   gap: 6px;
 }
 
+/* 부가 문구 */
+.mutedP{
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 10px 0 0;
+}
+.disclaimer{
+  margin: 10px 0 0;
+  color: rgba(200,210,230,0.9);
+  font-size: 12px;
+}
+.supportNote{
+  margin: 10px 0 0;
+  color: rgba(235,242,255,0.92);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
 /* Turnstile 통과 전 잠금 */
 body.locked .grid,
 body.locked .conclusion,
 body.locked #csvBtn,
 body.locked #shareBtn,
 body.locked #resetBtn,
-body.locked #issueBtn,
-body.locked #ctaLink{
+body.locked #issueBtn{
   opacity: .58;
   filter: blur(1.2px);
   pointer-events: none;
-}
-
-/* ✅ 쿠팡 광고 카드 내부 고정 */
-.adWrap{
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-.adWrap iframe{
-  width: 100% !important;
-  max-width: 420px;
-  display: block;
-  margin: 0 auto;
-  border: 0 !important;
 }

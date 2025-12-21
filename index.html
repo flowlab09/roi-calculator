@@ -1,213 +1,174 @@
 ﻿<!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>ROI 시나리오 비교 계산기</title>
-    <meta
-      name="description"
-      content="초기 비용 + 월 순이익 기준으로 A/B/C ROI를 비교하는 초경량 계산기"
-    />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ROI 시나리오 비교 계산기</title>
+  <meta name="description" content="초기 비용과 월 순이익만 입력하면 손익분기점과 24개월 누적 수익을 비교하는 ROI 계산기" />
 
-    <link rel="stylesheet" href="./app.css" />
+  <!-- ✅ AdSense: 계정 메타(요청한 것) -->
+  <meta name="google-adsense-account" content="ca-pub-7308531947967946">
 
-    <!-- Cloudflare Turnstile -->
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
+  <!-- ✅ AdSense: 스크립트(중복 금지, 1번만) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7308531947967946"
+    crossorigin="anonymous"></script>
 
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-TCTM0SR4TJ"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", "G-TCTM0SR4TJ");
-    </script>
-  </head>
+  <!-- Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-  <body class="locked">
-    <div class="wrap">
-      <header class="topbar">
-        <div>
-          <h1>ROI 시나리오 비교 계산기</h1>
-          <p class="sub">초기 비용 + 월 순이익 기준으로 A/B/C를 비교합니다.</p>
-        </div>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TCTM0SR4TJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag("js", new Date());
+    gtag("config", "G-TCTM0SR4TJ");
+  </script>
 
-        <div class="actions">
-          <button id="shareBtn" type="button" class="btn ghost">
-            공유 링크 복사
-          </button>
-          <button id="csvBtn" type="button" class="btn ghost">
-            CSV 다운로드
-          </button>
-          <button id="resetBtn" type="button" class="btn ghost">리셋</button>
-        </div>
-      </header>
+  <link rel="stylesheet" href="./app.css" />
+</head>
 
-      <!-- Turnstile -->
-      <section class="card tsCard">
-        <div class="head">
-          <h2>보안 확인</h2>
-          <div class="hint">
-            의심 트래픽일 때만 확인이 뜹니다. 완료되면 입력이 활성화됩니다.
-          </div>
-        </div>
+<body class="locked">
+  <div class="wrap">
+    <header class="topbar">
+      <div>
+        <h1>ROI 시나리오 비교 계산기</h1>
+        <p class="sub">초기 비용 + 월 순이익 기준으로 A/B/C를 비교합니다.</p>
+      </div>
 
-        <div class="tsRow">
-          <div
-            class="cf-turnstile"
-            data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd"
-            data-theme="dark"
-            data-callback="turnstileOk"
-          ></div>
-          <div class="tsNote" id="tsNote">보안 확인 대기중…</div>
-        </div>
-      </section>
+      <div class="actions">
+        <button id="shareBtn" type="button" class="btn ghost">공유 링크 복사</button>
+        <button id="csvBtn" type="button" class="btn ghost">CSV 다운로드</button>
+        <button id="resetBtn" type="button" class="btn ghost">리셋</button>
+      </div>
+    </header>
 
-      <!-- 결과 카드 -->
-      <section class="card">
-        <div class="head">
-          <h2>결과</h2>
-          <div class="meta" id="recommendRule">
-            추천 기준: 24개월 누적 최대 → 손익분기 빠른 순
-          </div>
-        </div>
-        <main class="grid" id="cards"></main>
-      </section>
+    <!-- Turnstile -->
+    <section class="card tsCard">
+      <div class="head">
+        <h2>보안 확인</h2>
+        <div class="hint">의심 트래픽일 때만 확인이 뜹니다. 완료되면 입력이 활성화됩니다.</div>
+      </div>
 
-      <!-- 결론 + CTA + 쿠팡 광고(여기 고정) -->
-      <section class="card conclusion">
-        <div class="head">
-          <h2>결론</h2>
-        </div>
+      <div class="tsRow">
+        <div
+          class="cf-turnstile"
+          data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd"
+          data-theme="dark"
+          data-callback="turnstileOk"
+        ></div>
+        <div class="tsNote" id="tsNote">보안 확인 대기중…</div>
+      </div>
+    </section>
 
-        <div id="conclusionText" class="conclusionText">
-          보안 확인 후 입력하면 추천이 표시됩니다.
-        </div>
+    <!-- 결과 카드 -->
+    <section class="card">
+      <div class="head">
+        <h2>결과</h2>
+        <div class="meta" id="recommendRule">추천 기준: 24개월 누적 최대 → 손익분기 빠른 순</div>
+      </div>
+      <main class="grid" id="cards"></main>
+    </section>
 
-        <!-- CTA -->
-        <div class="row" style="margin-top: 10px">
-          <a id="ctaLink" class="btn" href="#" target="_blank" rel="noopener noreferrer">
-            보안 확인 후 이용 가능합니다
-          </a>
-        </div>
+    <!-- 결론 -->
+    <section class="card conclusion">
+      <div class="head">
+        <h2>결론</h2>
+      </div>
+      <div id="conclusionText" class="conclusionText">보안 확인 후 입력하면 추천이 표시됩니다.</div>
+    </section>
 
-        <!-- ✅ 쿠팡 광고: 결론 카드 안에서만 보이게 -->
-        <div class="adWrap" id="coupangAdWrap">
-          <div class="hint" style="margin-bottom: 8px">추천 상품</div>
-          <div id="coupangAd"></div>
-        </div>
-      </section>
+    <!-- 안내/면책 + 광고수익 안내 -->
+    <section class="card about">
+      <div class="head">
+        <h2>이 계산기는 누가 사용하면 좋을까요?</h2>
+      </div>
 
-      <!-- 소개/면책 -->
-      <section class="card about">
-        <div class="head">
-          <h2>이 계산기는 누가 사용하면 좋을까요?</h2>
-        </div>
-        <p class="conclusionText">
-          초기 비용과 월 순이익을 비교하여 여러 시나리오의 ROI를 간단히 확인하고자 하는
-          창업·사업 준비자, 투자자 또는 부업을 고려하는 사람들에게 도움이 됩니다.
-        </p>
-        <p class="hint">
-          본 계산 결과는 참고용이며, 실제 결과는 상황에 따라 달라질 수 있습니다.
-        </p>
-      </section>
+      <p class="mutedP">
+        초기 비용과 월 순이익을 비교해 여러 시나리오의 ROI를 빠르게 확인하려는 창업·사업 준비자, 투자자,
+        또는 부업을 고려하는 분들에게 도움이 됩니다.
+      </p>
 
-      <!-- 개선/버그 제보 -->
-      <section class="card">
-        <div class="head">
-          <h2>개선 제안/버그 제보</h2>
-          <div class="hint">
-            GitHub 이슈로 받습니다. 버튼 누르면
-            <a
-              class="link"
-              href="https://github.com/flowlab09/markdown/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              >flowlab09/markdown</a
-            >
-            레포에 이슈가 생성됩니다.
-          </div>
-        </div>
+      <p class="disclaimer">
+        본 계산 결과는 참고용이며, 실제 결과는 상황에 따라 달라질 수 있습니다.
+      </p>
 
-        <div class="row">
-          <button id="issueBtn" type="button" class="btn">
-            개선 제안/버그 제보 (GitHub 이슈)
-          </button>
-        </div>
-      </section>
+      <p class="supportNote">
+        서비스의 업데이트를 위해서 광고수익을 내기로 했습니다. 더 좋은 방향으로 서비스를 이끌어 갈 수 있도록 노력하겠습니다.
+      </p>
+    </section>
 
-      <!-- 보안 제보 -->
-      <section class="card security">
-        <div class="head">
-          <h2>보안 제보</h2>
-          <div class="hint">
-            보안 취약점은 GitHub 이슈로 받지 않습니다. 이메일로만 제보해주세요.
-            (민감정보/토큰/시드 입력 금지)
-          </div>
-        </div>
+    <!-- 쿠팡 파트너스 -->
+    <section class="card">
+      <div class="head">
+        <h2>추천 상품</h2>
+        <div class="hint">일부 링크는 제휴 링크일 수 있습니다.</div>
+      </div>
 
-        <div class="row">
-          <a id="securityMailBtn" class="btn" href="#">보안 이메일 열기</a>
-          <button id="copyMailBtn" class="btn ghost" type="button">
-            이메일 복사
-          </button>
-          <span class="pill" id="securityEmailText"
-            >roicalculator.official@gmail.com</span
-          >
-        </div>
-      </section>
+      <div id="coupangAd"></div>
 
-      <footer class="footer">
-        <div>ALIVE DESERVE</div>
-        <div>© 2025 BAN. All rights reserved.</div>
-      </footer>
-    </div>
-
-    <script>
-      // Turnstile callback
-      window.__ts_ok = false;
-      window.turnstileOk = function () {
-        window.__ts_ok = true;
-        document.body.classList.remove("locked");
-        const note = document.getElementById("tsNote");
-        if (note) note.textContent = "보안 확인 완료.";
-      };
-    </script>
-
-    <script src="./app.js" defer></script>
-
-    <!-- ✅ 쿠팡 스크립트는 반드시 body 맨 아래(문서 안)에 -->
-    <script src="https://ads-partners.coupang.com/g.js"></script>
-    <script>
-      // 쿠팡 광고 생성 → 생성된 iframe을 #coupangAd 안으로 강제 이동(가장 안정적)
-      try {
+      <!-- ✅ Coupang Partners -->
+      <script src="https://ads-partners.coupang.com/g.js"></script>
+      <script>
         new PartnersCoupang.G({
-          id: 951169, // 네 광고 ID
-          template: "carousel",
-          trackingCode: "AF8969399", // 네 추적 코드
-          width: "100%",
-          height: "160",
+          "id":951169,
+          "trackingCode":"AF8969399",
+          "subId":null,
+          "template":"carousel",
+          "width":"100",
+          "height":"500"
         });
-      } catch (e) {}
+      </script>
+    </section>
 
-      // 쿠팡이 body에 붙여버리는 경우가 있어서 결론 카드 컨테이너로 이동
-      setTimeout(() => {
-        const wrap = document.getElementById("coupangAd");
-        if (!wrap) return;
-        const iframe = document.querySelector(
-          "iframe[src*='ads-partners.coupang.com']"
-        );
-        if (iframe) wrap.appendChild(iframe);
-      }, 400);
-    </script>
-  </body>
+    <!-- 개선/버그 제보: GitHub Issues -->
+    <section class="card">
+      <div class="head">
+        <h2>개선 제안/버그 제보</h2>
+        <div class="hint">
+          GitHub 이슈로 받습니다:
+          <a class="link" href="https://github.com/flowlab09/markdown/issues" target="_blank" rel="noopener noreferrer">flowlab09/markdown</a>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="issueBtn" type="button" class="btn">개선 제안/버그 제보 (GitHub 이슈)</button>
+      </div>
+    </section>
+
+    <!-- 보안 제보 -->
+    <section class="card security">
+      <div class="head">
+        <h2>보안 제보</h2>
+        <div class="hint">
+          보안 취약점은 GitHub 이슈로 받지 않습니다. 이메일로만 제보해주세요. (민감정보/토큰/시드 입력 금지)
+        </div>
+      </div>
+
+      <div class="row">
+        <a id="securityMailBtn" class="btn" href="#">보안 이메일 열기</a>
+        <button id="copyMailBtn" class="btn ghost" type="button">이메일 복사</button>
+        <span class="pill" id="securityEmailText">roicalculator.official@gmail.com</span>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>ALIVE DESERVE</div>
+      <div>© 2025 BAN. All rights reserved.</div>
+    </footer>
+  </div>
+
+  <script>
+    // Turnstile callback
+    window.__ts_ok = false;
+    window.turnstileOk = function () {
+      window.__ts_ok = true;
+      document.body.classList.remove("locked");
+      const note = document.getElementById("tsNote");
+      if (note) note.textContent = "보안 확인 완료.";
+    };
+  </script>
+
+  <script src="./app.js" defer></script>
+</body>
 </html>
