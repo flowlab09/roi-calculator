@@ -3,38 +3,50 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ROI Scenario Master: Global Edition</title>
-    <meta name="description" content="글로벌 산업 통계 기반 정밀 ROI 시뮬레이터" />
+    
+    <title>ROI 시나리오 마스터 - AI 기반 사업 타당성 & CPC 분석기</title>
+    <meta name="description" content="무료 창업 ROI 계산기. 초기 투자금, 목표 매출, 광고비(CPC)를 입력하여 순수익과 손익분기점(BEP)을 3초 만에 시뮬레이션하세요." />
+    <meta name="keywords" content="ROI계산기, 사업타당성분석, 마케팅예산설정, CPC계산기, 창업비용계산, 손익분기점, 스타트업재무설계" />
+    <meta name="author" content="ROI Master" />
 
-    <!-- 외부 라이브러리 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="💰 내 사업 ROI & 마케팅 시뮬레이터" />
+    <meta property="og:description" content="투자금과 광고 예산(CPC)을 입력하면 예상 수익과 현금 흐름이 보입니다. 무료로 확인해보세요." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1200&auto=format&fit=crop" />
+    <meta property="og:url" content="https://roi-master-app.github.io" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ROI Scenario Master",
+      "description": "Professional ROI & CPC calculator for business planning. Simulates Net Profit, BEP, and Cash Flow based on ad budget.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "KRW"
+      },
+      "featureList": [
+        "ROI Calculation",
+        "Break-even Point (BEP)",
+        "CPC & Ad Budget Simulation",
+        "Interactive Cash Flow Chart"
+      ],
+      "author": {
+        "@type": "Organization",
+        "name": "ROI Master"
+      }
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
-    <!-- CSS 연결 -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="locked">
-
-    <!-- 보안 오버레이 (Cloudflare Turnstile) -->
-    <div id="securityOverlay" class="ts-overlay">
-        <div class="glass-card p-10 text-center max-w-sm w-full mx-4 border-white/20">
-            <h2 class="text-2xl font-black mb-4 flex items-center justify-center gap-3 text-white">
-                <i data-lucide="shield-check" class="text-blue-500 w-8 h-8"></i> 보안 확인
-            </h2>
-            <p class="text-sm text-slate-400 mb-8 leading-relaxed">보다 안전한 서비스 환경을 위해<br>보안 인증을 완료해주세요.</p>
-            <div class="flex justify-center mb-6">
-                <!-- 사이트 키 적용됨 -->
-                <div class="cf-turnstile" 
-                     data-sitekey="0x4AAAAAACHD5Ob4hHLN1WYd" 
-                     data-callback="onTurnstileSuccess">
-                </div>
-            </div>
-            <p id="tsStatus" class="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 animate-pulse">Waiting for Verification...</p>
-        </div>
-    </div>
-
-    <!-- 메인 대시보드 -->
+<body>
     <div class="main-content max-w-[1400px] mx-auto p-4 md:p-10 transition-all duration-700">
         
         <header class="flex flex-col xl:flex-row xl:items-end justify-between mb-16 gap-8">
@@ -60,12 +72,6 @@
                     <button onclick="setLang('en')" id="btn-lang-en" class="px-6 py-3 rounded-xl text-xs font-black transition-all">ENG</button>
                 </div>
                 <div class="flex gap-2">
-                    <button id="shareBtn" class="p-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition text-slate-300">
-                        <i data-lucide="share-2" class="w-5 h-5"></i>
-                    </button>
-                    <button id="csvBtn" class="p-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition text-slate-300">
-                        <i data-lucide="download" class="w-5 h-5"></i>
-                    </button>
                     <button id="resetBtn" class="p-3.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-500 rounded-xl transition">
                         <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
                     </button>
@@ -74,55 +80,73 @@
         </header>
 
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-10">
-            <!-- 변수 설정 -->
             <div class="xl:col-span-4 space-y-8">
-                <div class="glass-card p-10">
-                    <div class="flex items-center justify-between mb-12">
+                <div class="glass-card p-8">
+                    <div class="flex items-center justify-between mb-8">
                         <h2 id="ui-input-title" class="text-2xl font-black flex items-center gap-3 text-white">
                             <i data-lucide="settings-2" class="text-blue-500"></i> 변수 설정
                         </h2>
                         <div id="scenario-tabs" class="flex gap-2"></div>
                     </div>
 
-                    <div class="space-y-12">
-                        <div class="space-y-5">
+                    <div class="space-y-8">
+                        <div class="space-y-4">
                             <div class="flex justify-between items-center px-1">
                                 <label id="ui-label-initial" class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">초기 투자금 (CapEx)</label>
-                                <span id="display-initial" class="text-xl font-black text-blue-400">0</span>
+                                <span id="display-initial" class="text-lg font-black text-blue-400">0</span>
                             </div>
                             <input type="range" id="input-initial" class="range-slider w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-blue-500">
                         </div>
 
-                        <div class="space-y-5">
+                        <div class="space-y-4">
                             <div class="flex justify-between items-center px-1">
                                 <label id="ui-label-revenue" class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">목표 월 매출</label>
-                                <span id="display-revenue" class="text-xl font-black text-emerald-400">0</span>
+                                <span id="display-revenue" class="text-lg font-black text-emerald-400">0</span>
                             </div>
                             <input type="range" id="input-revenue" class="range-slider w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-emerald-500">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-6 pt-10 border-t border-white/5 text-center">
-                            <div class="bg-white/5 p-6 rounded-3xl border border-white/5">
-                                <p id="ui-result-roi" class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">연 예상 ROI</p>
-                                <p id="display-roi" class="text-3xl font-black text-blue-500">0.0%</p>
+                        <div class="pt-6 border-t border-white/5 space-y-6">
+                            <h3 class="text-xs font-black text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="megaphone" class="w-3 h-3"></i> Marketing & CPC
+                            </h3>
+                            
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center px-1">
+                                    <label id="ui-label-ad-budget" class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">월 광고 예산</label>
+                                    <span id="display-ad-budget" class="text-lg font-black text-amber-400">0</span>
+                                </div>
+                                <input type="range" id="input-ad-budget" class="range-slider w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-amber-500">
                             </div>
-                            <div class="bg-white/5 p-6 rounded-3xl border border-white/5">
-                                <p id="ui-result-profit" class="text-[10px] font-black text-slate-500 uppercase mb-3 tracking-widest">월 순수익</p>
-                                <p id="display-profit" class="text-2xl font-black text-emerald-500">0</p>
+
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center px-1">
+                                    <label id="ui-label-cpc" class="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">평균 CPC (클릭당 비용)</label>
+                                    <span id="display-cpc" class="text-lg font-black text-slate-300">0</span>
+                                </div>
+                                <input type="range" id="input-cpc" class="range-slider w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-slate-500">
+                            </div>
+                            
+                            <div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 text-center">
+                                <p class="text-[10px] text-amber-200 uppercase tracking-widest mb-1">예상 월 방문자 (Clicks)</p>
+                                <p id="display-clicks" class="text-xl font-black text-amber-500">0</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 pt-6 border-t border-white/5 text-center">
+                            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                <p id="ui-result-roi" class="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">연 예상 ROI</p>
+                                <p id="display-roi" class="text-2xl font-black text-blue-500">0.0%</p>
+                            </div>
+                            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                <p id="ui-result-profit" class="text-[10px] font-black text-slate-500 uppercase mb-2 tracking-widest">월 순수익</p>
+                                <p id="display-profit" class="text-xl font-black text-emerald-500">0</p>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="bg-blue-600 p-10 rounded-[3rem] shadow-2xl shadow-blue-950/50">
-                    <h3 class="text-[11px] font-black uppercase tracking-[0.3em] mb-5 opacity-60 flex items-center gap-2 text-white">
-                        <i data-lucide="zap" class="w-4 h-4 fill-white/50"></i> <span id="ui-strategy-title">전략 노트</span>
-                    </h3>
-                    <p id="display-strategy" class="text-xl font-bold leading-tight tracking-tight text-white transition-transform">분석 데이터 로딩 중...</p>
-                </div>
             </div>
 
-            <!-- 그래프 및 통계 -->
             <div class="xl:col-span-8 space-y-10">
                 <div class="glass-card p-10 relative overflow-hidden">
                     <div class="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-8">
@@ -131,7 +155,7 @@
                                 <i data-lucide="bar-chart-3" class="text-blue-500 w-8 h-8"></i> 현금 흐름 분석
                             </h2>
                             <p id="ui-target-msg" class="text-slate-500 text-sm font-bold mt-2 flex items-center gap-2">
-                                <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i> 목표 수익 라인을 드래그하여 시점을 확인하세요
+                                <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i> 목표 수익 라인을 드래그하세요
                             </p>
                         </div>
                         <div id="month-selectors" class="flex bg-white/5 p-1.5 rounded-2xl border border-white/10"></div>
@@ -164,8 +188,7 @@
             </div>
         </div>
     </div>
-
-    <!-- 스크립트 연결 -->
+    
     <script src="script.js"></script>
 </body>
 </html>
